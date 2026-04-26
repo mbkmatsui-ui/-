@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="在庫管理">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e3a5f'/><text y='.9em' font-size='80' x='10'>📦</text></svg>">
+<title>在庫管理アプリ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px;-webkit-text-size-adjust:100%;overscroll-behavior:none;}
+#app{max-width:480px;margin:0 auto;min-height:100vh;background:#fff;position:relative;padding-bottom:calc(70px + env(safe-area-inset-bottom));}
+.header{background:linear-gradient(135deg,#1e3a5f,#2d6a9f);color:#fff;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+.header h1{font-size:16px;font-weight:700;}
+.conn-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;}
+.conn-dot.on{background:#4caf50;}.conn-dot.off{background:#9e9e9e;}
+.conn-label{font-size:11px;display:flex;align-items:center;}
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:1px solid #e0e0e0;display:flex;z-index:100;box-shadow:0 -2px 8px rgba(0,0,0,0.1);padding-bottom:env(safe-area-inset-bottom);}
+.tabbar button{flex:1;border:none;background:none;padding:8px 2px 6px;font-size:9px;color:#9e9e9e;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:color 0.2s;}
+.tabbar button span.icon{font-size:18px;}
+.tabbar button.active{color:#2d6a9f;}
+.page{display:none;padding:16px;-webkit-overflow-scrolling:touch;}
+.page.active{display:block;}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #f0f0f0;}
+.card-title{font-size:13px;font-weight:700;color:#1e3a5f;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.btn{border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.btn-primary{background:#2d6a9f;color:#fff;}.btn-primary:active{background:#1e3a5f;}
+.btn-success{background:#4caf50;color:#fff;}.btn-success:active{background:#388e3c;}
+.btn-danger{background:#ef5350;color:#fff;}.btn-danger:active{background:#c62828;}
+.btn-warning{background:#ff9800;color:#fff;}.btn-warning:active{background:#e65100;}
+.btn-outline{background:#fff;color:#2d6a9f;border:2px solid #2d6a9f;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-block{width:100%;justify-content:center;}
+.form-group{margin-bottom:12px;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;}
+.form-control{width:100%;border:1.5px solid #e0e0e0;border-radius:8px;padding:10px 12px;font-size:16px;outline:none;transition:border-color 0.2s;background:#fff;-webkit-appearance:none;appearance:none;}
+.form-control:focus{border-color:#2d6a9f;}
+select.form-control{-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
+.alert{border-radius:8px;padding:12px;margin-bottom:8px;font-size:13px;}
+.alert-danger{background:#fdecea;border-left:4px solid #ef5350;color:#c62828;}
+.alert-success{background:#e8f5e9;border-left:4px solid #4caf50;color:#2e7d32;}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl th{background:#1e3a5f;color:#fff;padding:8px 6px;text-align:left;font-weight:600;}
+.tbl td{padding:8px 6px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+.tbl tr:nth-child(even) td{background:#f8f9fa;}
+.tbl-wrap{overflow-x:auto;border-radius:8px;border:1px solid #e0e0e0;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.stat-card{background:#fff;border-radius:10px;padding:12px 8px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.08);}
+.stat-card .num{font-size:22px;font-weight:800;color:#2d6a9f;}
+.stat-card .lbl{font-size:10px;color:#888;margin-top:2px;}
+.badge{display:inline-block;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;}
+.badge-danger{background:#fdecea;color:#c62828;}.badge-success{background:#e8f5e9;color:#2e7d32;}
+.badge-warning{background:#fff8e1;color:#e65100;}.badge-info{background:#e3f2fd;color:#1565c0;}
+.badge-gray{background:#f0f0f0;color:#666;}
+.hiroi-item{background:#fff;border:1.5px solid #e0e0e0;border-radius:10px;padding:14px;margin-bottom:8px;cursor:pointer;transition:all 0.2s;}
+.hiroi-item:active{background:#e3f2fd;border-color:#2d6a9f;}
+.hiroi-item .hiroi-name{font-weight:700;font-size:15px;color:#1e3a5f;}
+.hiroi-item .hiroi-meta{font-size:11px;color:#888;margin-top:4px;}
+.scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.empty{text-align:center;padding:32px 16px;color:#bbb;}
+.empty .empty-icon{font-size:48px;margin-bottom:8px;}
+.shortage-cell{color:#c62828;font-weight:700;}
+.ok-cell{color:#2e7d32;font-weight:600;}
+#item-table-container table td,#item-table-container table th{border-bottom:1px solid #e8e8e8;padding:6px 4px;}
+#item-table-container table tr:nth-child(even) td{background:#f8f9fa;}
+#item-table-container table tr:nth-child(even) td:first-child{background:#f8f9fa;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;-webkit-overflow-scrolling:touch;}
+.overlay.active{display:flex;align-items:flex-end;}
+.modal{background:#fff;border-radius:16px 16px 0 0;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom));width:100%;max-width:480px;margin:0 auto;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px;color:#1e3a5f;}
+/* 数量ステッパー（iPhone対応の＋／−ボタン） */
+.qty-stepper{display:inline-flex;align-items:stretch;border:1.5px solid #e0e0e0;border-radius:8px;overflow:hidden;background:#fff;vertical-align:middle;}
+.qty-stepper input[type="number"]{border:none;outline:none;text-align:center;font-size:16px;width:64px;min-width:0;padding:8px 4px;background:transparent;-webkit-appearance:none;-moz-appearance:textfield;appearance:none;}
+.qty-stepper input[type="number"]::-webkit-inner-spin-button,
+.qty-stepper input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.qty-stepper button{border:none;background:#e8f0f8;color:#1e3a5f;width:38px;font-size:20px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;}
+.qty-stepper button:active{background:#b3d4f5;}
+.qty-stepper-block{display:flex;width:100%;}
+.qty-stepper-block input[type="number"]{flex:1;}
+.qty-stepper-sm{border-width:1px;border-radius:6px;}
+.qty-stepper-sm input[type="number"]{width:48px;font-size:13px;padding:4px 2px;}
+.qty-stepper-sm button{width:26px;font-size:14px;}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="header">
+  <h1>📦 在庫管理</h1>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="sync-indicator" style="display:none;font-size:10px;color:#a5d6a7;">↻ 同期中</span>
+    <div class="conn-label">
+      <span class="conn-dot off" id="connDot"></span>
+      <span id="connLabel">未接続</span>
+    </div>
+  </div>
+</div>
+
+<div id="page-home" class="page active">
+  <div class="stats-row">
+    <div class="stat-card"><div class="num" id="stat-products">-</div><div class="lbl">製品種類</div></div>
+    <div class="stat-card"><div class="num" id="stat-alerts">-</div><div class="lbl">要発注</div></div>
+    <div class="stat-card"><div class="num" id="stat-tx">-</div><div class="lbl">入出庫件数</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚠️ アラート</div>
+    <div id="alert-list"><div class="empty"><div class="empty-icon">✅</div>要発注なし</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 最近の入出庫</div>
+    <div id="recent-tx"><div class="empty">記録なし</div></div>
+  </div>
+</div>
+
+<div id="page-hiroi" class="page">
+  <div id="hiroi-list-view">
+    <button class="btn btn-primary btn-block" style="margin-bottom:12px;" onclick="showNewHiroidashiForm()">＋ 新しい拾い出し</button>
+    <div id="hiroi-list"></div>
+  </div>
+  <div id="hiroi-detail-view" style="display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+      <button class="btn btn-outline btn-sm" onclick="backToHiroiList()">← 戻る</button>
+      <h2 id="hiroi-detail-title" style="font-size:15px;font-weight:700;color:#1e3a5f;flex:1;"></h2>
+      <span id="hiroi-detail-status-badge"></span>
+    </div>
+    <div id="hiroi-detail-controls" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"></div>
+    <div style="margin-bottom:12px;">
+      <button class="btn btn-outline btn-sm" onclick="showAddItemModal()" id="btn-add-item">＋ 部材追加</button>
+    </div>
+    <div class="scroll-x">
+    <table class="tbl" id="hiroi-items-table">
+      <thead><tr><th>品名</th><th>色</th><th>品番</th><th>必要</th><th>在庫</th><th>不足</th><th></th></tr></thead>
+      <tbody id="hiroi-items-tbody"></tbody>
+    </table>
+    </div>
+    <div id="hiroi-order-section" style="display:none;margin-top:16px;">
+      <div class="card">
+        <div class="card-title">📬 発注リスト</div>
+        <div style="margin-bottom:10px;padding:8px;background:#f0f4f8;border-radius:8px;">
+          <div style="font-size:12px;font-weight:600;color:#1e3a5f;margin-bottom:6px;">発注対象</div>
+          <div style="display:flex;gap:6px;">
+            <label style="flex:1;display:flex;align-items:center;gap:4px;padding:6px 8px;background:#fff;border-radius:6px;border:1.5px solid #e0e0e0;cursor:pointer;font-size:12px;">
+              <input type="radio" name="order-mode" value="shortage" checked onchange="onOrderModeChange()" style="margin:0;" />
+              <span>不足分のみ</span>
+            </label>
+            <label style="flex:1;display:flex;align-items:center;gap:4px;padding:6px 8px;background:#fff;border-radius:6px;border:1.5px solid #e0e0e0;cursor:pointer;font-size:12px;">
+              <input type="radio" name="order-mode" value="full" onchange="onOrderModeChange()" style="margin:0;" />
+              <span>拾い出し全量</span>
+            </label>
+          </div>
+        </div>
+        <div class="scroll-x">
+        <table class="tbl" id="order-table">
+          <thead><tr><th>品名</th><th>色</th><th>品番</th><th id="order-qty-th">不足数</th><th></th></tr></thead>
+          <tbody id="order-tbody"></tbody>
+        </table>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:#f8f9fa;border-radius:8px;border:1.5px dashed #b0c4de;">
+          <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:8px;">➕ 商品を直接追加</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <input type="text" id="manual-order-name" class="form-control" placeholder="品名・商品名" style="font-size:13px;" />
+            <input type="text" id="manual-order-code" class="form-control" placeholder="品番（任意）" style="font-size:13px;" />
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="manual-order-color" class="form-control" placeholder="色（任意）" style="font-size:13px;flex:1;" />
+              <span class="qty-stepper">
+                <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+                <input type="number" id="manual-order-qty" placeholder="数量" min="1" value="1" />
+                <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+              </span>
+            </div>
+            <button class="btn btn-primary btn-sm btn-block" onclick="addManualOrderItem()">追加する</button>
+          </div>
+        </div>
+        <button class="btn btn-block" id="btn-line-share"
+          style="margin-top:12px;background:#06C755;color:#fff;font-weight:700;font-size:14px;border-radius:8px;padding:12px;"
+          onclick="shareToLine()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="white" style="vertical-align:middle;margin-right:6px;"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+          LINEで発注内容を送る
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="page-tx" class="page">
+  <button class="btn btn-primary btn-block" style="margin-bottom:12px;" onclick="openAddTxModal()">＋ 入出庫を記録</button>
+  <div class="scroll-x">
+  <table class="tbl">
+    <thead><tr><th>日付</th><th>品名</th><th>色</th><th>種別</th><th>数量</th><th></th></tr></thead>
+    <tbody id="tx-tbody"></tbody>
+  </table>
+  </div>
+</div>
+
+<div id="page-parts" class="page">
+  <button class="btn btn-primary btn-block" style="margin-bottom:12px;" onclick="openAddPartModal()">＋ 部品を追加</button>
+  <div id="parts-list"></div>
+</div>
+
+<div id="page-summary" class="page">
+  <div class="form-group">
+    <select class="form-control" id="summary-sheet-select" onchange="renderSummary()">
+      <option value="">-- シートを選択 --</option>
+    </select>
+  </div>
+  <div id="summary-content"></div>
+</div>
+
+<div id="page-master" class="page">
+  <div class="form-group">
+    <select class="form-control" id="master-sheet-select" onchange="renderMaster()">
+      <option value="">-- シートを選択 --</option>
+    </select>
+  </div>
+  <div id="master-content"></div>
+</div>
+
+<div id="page-settings" class="page">
+  <div class="card">
+    <div class="card-title">🔗 Google スプレッドシート連携</div>
+    <div class="form-group">
+      <label>GAS ウェブアプリ URL</label>
+      <input type="url" class="form-control" id="gas-url-input" placeholder="https://script.google.com/..." />
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-sm" onclick="saveGasUrl()">接続する</button>
+      <button class="btn btn-outline btn-sm" onclick="testGasConnection()">接続テスト</button>
+      <button class="btn btn-danger btn-sm" onclick="disconnectGas()">切断</button>
+    </div>
+    <div id="gas-test-result" style="margin-top:8px;font-size:12px;"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔄 データ同期</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-success btn-sm" onclick="syncAllToSheets()">📤 全データを送信</button>
+      <button class="btn btn-outline btn-sm" onclick="loadFromSheets()">📥 今すぐ読み込み</button>
+    </div>
+    <div id="sync-result" style="margin-top:8px;font-size:12px;color:#888;"></div>
+    <div style="margin-top:10px;border-top:1px solid #f0f0f0;padding-top:10px;">
+      <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:6px;">📋 商品マスタ管理</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="exportMasterToSheets()">📤 商品マスタを書き出す</button>
+        <button class="btn btn-outline btn-sm" onclick="importMasterFromSheets()">📥 商品マスタを読み込む</button>
+      </div>
+      <div id="master-sync-result" style="margin-top:6px;font-size:11px;color:#888;"></div>
+    </div>
+    <div style="margin-top:12px;border-top:1px solid #f0f0f0;padding-top:12px;">
+      <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:8px;">🔁 自動同期</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" id="auto-sync-toggle" onchange="toggleAutoSync()" style="width:18px;height:18px;">
+          自動同期を有効にする
+        </label>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12px;color:#555;">間隔：</span>
+        <select class="form-control" id="auto-sync-interval" onchange="updateAutoSyncInterval()" style="width:120px;font-size:13px;">
+          <option value="30">30秒</option>
+          <option value="60" selected>1分</option>
+          <option value="180">3分</option>
+          <option value="300">5分</option>
+          <option value="600">10分</option>
+        </select>
+      </div>
+      <div id="auto-sync-status" style="margin-top:6px;font-size:11px;color:#888;"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🗑️ データ管理</div>
+    <button class="btn btn-danger btn-sm" onclick="clearAllData()">全データをリセット</button>
+  </div>
+</div>
+
+<div class="tabbar">
+  <button class="active" onclick="switchTab('home')"><span class="icon">🏠</span>ホーム</button>
+  <button onclick="switchTab('hiroi')"><span class="icon">📋</span>拾い出し</button>
+  <button onclick="switchTab('tx')"><span class="icon">📝</span>入出庫</button>
+  <button onclick="switchTab('summary')"><span class="icon">📊</span>在庫</button>
+  <button onclick="switchTab('settings')"><span class="icon">⚙️</span>設定</button>
+</div>
+
+<!-- Modals -->
+<div class="overlay" id="overlay-add-tx" onclick="closeOverlay('overlay-add-tx')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">入出庫を記録</div>
+    <div class="form-group"><label>種別</label>
+      <select class="form-control" id="tx-type"><option value="入庫">入庫</option><option value="出庫">出庫</option></select></div>
+    <div class="form-group"><label>製品カテゴリ</label>
+      <select class="form-control" id="tx-sheet" onchange="updateTxProducts()"><option value="">選択</option></select></div>
+    <div class="form-group"><label>製品名</label>
+      <select class="form-control" id="tx-product" onchange="updateTxColors()"><option value="">選択</option></select></div>
+    <div class="form-group"><label>色</label>
+      <select class="form-control" id="tx-color" onchange="updateTxCode()"><option value="">選択</option></select></div>
+    <div class="form-group"><label>品番（自動入力）</label>
+      <input type="text" class="form-control" id="tx-code" readonly style="background:#f8f9fa;" /></div>
+    <div class="form-group"><label>数量</label>
+      <span class="qty-stepper qty-stepper-block">
+        <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+        <input type="number" id="tx-qty" min="1" value="1" />
+        <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+      </span></div>
+    <div class="form-group"><label>日付</label>
+      <input type="date" class="form-control" id="tx-date" /></div>
+    <div class="form-group"><label>備考</label>
+      <input type="text" class="form-control" id="tx-note" placeholder="任意" /></div>
+    <button class="btn btn-primary btn-block" onclick="addTransaction()">記録する</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-add-part" onclick="closeOverlay('overlay-add-part')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">部品を追加</div>
+    <div class="form-group"><label>品番</label><input type="text" class="form-control" id="part-code" /></div>
+    <div class="form-group"><label>部品名</label><input type="text" class="form-control" id="part-name" /></div>
+    <div class="form-group"><label>カテゴリ</label><input type="text" class="form-control" id="part-cat" /></div>
+    <div class="form-group"><label>単位</label><input type="text" class="form-control" id="part-unit" value="個" /></div>
+    <div class="form-group"><label>単価</label><input type="number" class="form-control" id="part-price" /></div>
+    <div class="form-group"><label>最低在庫数</label>
+      <span class="qty-stepper qty-stepper-block">
+        <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+        <input type="number" id="part-min" min="0" value="0" />
+        <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+      </span></div>
+    <div class="form-group"><label>保管場所</label><input type="text" class="form-control" id="part-loc" /></div>
+    <div class="form-group"><label>仕入先</label><input type="text" class="form-control" id="part-supplier" /></div>
+    <button class="btn btn-primary btn-block" onclick="addPart()">追加する</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-new-hiroi" onclick="closeOverlay('overlay-new-hiroi')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">新しい拾い出し</div>
+    <div class="form-group"><label>現場名</label>
+      <input type="text" class="form-control" id="hiroi-new-name" placeholder="例：〇〇邸 新築工事" /></div>
+    <div class="form-group"><label>日付</label>
+      <input type="date" class="form-control" id="hiroi-new-date" /></div>
+    <button class="btn btn-primary btn-block" onclick="createHiroi()">作成する</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-add-item" onclick="closeOverlay('overlay-add-item')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-height:90vh;">
+    <div class="modal-title">部材を追加</div>
+    <div class="form-group">
+      <label>製品カテゴリ</label>
+      <select class="form-control" id="item-sheet" onchange="showItemTable()"><option value="">選択してください</option></select>
+    </div>
+    <div id="item-table-container" style="overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;max-height:60vh;"></div>
+    <button class="btn btn-primary btn-block" id="btn-add-items-table" style="display:none;" onclick="addItemsFromTable()">✅ 入力した部材を追加</button>
+  </div>
+</div>
+
+
+<div class="overlay" id="overlay-edit-part" onclick="closeOverlay('overlay-edit-part')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">部品を編集</div>
+    <input type="hidden" id="edit-part-id" />
+    <div class="form-group"><label>品番</label><input type="text" class="form-control" id="edit-part-code" /></div>
+    <div class="form-group"><label>部品名</label><input type="text" class="form-control" id="edit-part-name" /></div>
+    <div class="form-group"><label>カテゴリ</label><input type="text" class="form-control" id="edit-part-cat" /></div>
+    <div class="form-group"><label>単位</label><input type="text" class="form-control" id="edit-part-unit" value="個" /></div>
+    <div class="form-group"><label>単価</label><input type="number" class="form-control" id="edit-part-price" /></div>
+    <div class="form-group"><label>最低在庫数</label>
+      <span class="qty-stepper qty-stepper-block">
+        <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+        <input type="number" id="edit-part-min" min="0" value="0" />
+        <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+      </span></div>
+    <div class="form-group"><label>保管場所</label><input type="text" class="form-control" id="edit-part-loc" /></div>
+    <div class="form-group"><label>仕入先</label><input type="text" class="form-control" id="edit-part-supplier" /></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-block" onclick="saveEditPart()">💾 保存する</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-edit-tx" onclick="closeOverlay('overlay-edit-tx')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">入出庫を編集</div>
+    <input type="hidden" id="edit-tx-id" />
+    <div class="form-group"><label>種別</label>
+      <select class="form-control" id="edit-tx-type"><option value="入庫">入庫</option><option value="出庫">出庫</option></select></div>
+    <div class="form-group"><label>数量</label>
+      <span class="qty-stepper qty-stepper-block">
+        <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+        <input type="number" id="edit-tx-qty" min="1" />
+        <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+      </span></div>
+    <div class="form-group"><label>日付</label>
+      <input type="date" class="form-control" id="edit-tx-date" /></div>
+    <div class="form-group"><label>備考</label>
+      <input type="text" class="form-control" id="edit-tx-note" placeholder="任意" /></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary btn-block" onclick="saveEditTx()">💾 保存する</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const PRODUCT_DATA = {"KAKU RK85": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "オークグレー", "モダンベージュ"], "products": [{"name": "軒とい ×3000", "qty": "4", "unit": "個", "section": null, "codes": ["MQK0130", "MQK1130", "MQK5130", "MQK6130", "MQKD130", "MQKX130"]}, {"name": "軒継手", "qty": "12", "unit": "個", "section": null, "codes": ["MQK0634", "MQK1634", "MQK5634", "MQK6634", "MQKD634", "MQKX634"]}, {"name": "伸縮継手", "qty": "2", "unit": "個", "section": null, "codes": ["MQK0636", "MQK1636", "MQK5636", "MQK6636", "MQKD636", "MQKX636"]}, {"name": "止まり（左右一組）", "qty": "1", "unit": "個", "section": null, "codes": ["MQK0635", "MQK1635", "MQK5635", "MQK6635", "MQKD635", "MQKX635"]}, {"name": "曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQK0431", "MQK1431", "MQK5431", "MQK6431", "MQKD431", "MQKX431"]}, {"name": "内飾り板（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQK0032", "MQK1032", "MQK5032", "MQK6032", "MQKD032", "MQKX032"]}, {"name": "F型集水器 エルボカン合", "qty": "5", "unit": "個", "section": null, "codes": ["MQK0301", "MQK1301", "MQK5301", "MQK6301", "MQKD301", "MQKX301"]}, {"name": "軒といストッパー Ⅰ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ69131", "MQ69131", "MQ69131", "MQ69131", "MQ69131", "MQ69131"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "F型集水器 RK85×PC30-S30×60", "qty": "5", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQK03301", "MQK13301", "MQK53301", "MQK63301", "MQKD3301", "MQKX3301"]}, {"name": "自在ドレン（落葉よけ付）KZA×45", "qty": "4", "unit": "セット", "section": "■ 落とし口部材", "codes": ["KZA0922", "—", "KZA5922", "KZA6922", "—", "—"]}, {"name": "自在ドレン S15（落葉よけ付）", "qty": "4", "unit": "セット", "section": "■ 落とし口部材", "codes": ["KBS0920", "KBS1920", "KBS5920", "KBS6920", "—", "KBSX920"]}, {"name": "自在ドレン PC30-S30（大）", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0962", "MQC1962", "MQC5962", "MQC6962", "MQCD962", "MQCX962"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCD963", "MQCX963"]}, {"name": "自在ドレン φ60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0941", "—", "MQC5941", "MQC6941", "—", "—"]}, {"name": "自在ドレン 75×60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0943", "—", "MQC5943", "MQC6943", "—", "—"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}, {"name": "自在ドレン 60（小）モダン/オーク", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "—", "—", "KQKD941J", "KQKX941J"]}, {"name": "自在ドレン VP-VU65×VP-VU50", "qty": "12", "unit": "個", "section": "■ 落とし口部材", "codes": ["KA30920", "—", "—", "—", "—", "—"]}, {"name": "自在ドレン 75×60（KK）", "qty": "30", "unit": "個", "section": "■ 落とし口部材", "codes": ["KK0904", "KK1904", "KK5904", "KK6904", "—", "—"]}, {"name": "吊具（高強度）正面打出なし15mm固定式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQK99300PB", "MQK99300PB", "MQK99300PB", "MQK99300PB", "MQK99300PB", "MQK99300PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式3寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQK99333PB", "MQK99333PB", "MQK99333PB", "MQK99333PB", "MQK99333PB", "MQK99333PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式4寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQK99334PB", "MQK99334PB", "MQK99334PB", "MQK99334PB", "MQK99334PB", "MQK99334PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQK99335PB", "MQK99335PB", "MQK99335PB", "MQK99335PB", "MQK99335PB", "MQK99335PB"]}, {"name": "勾配調整プレート ±0.5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924"]}, {"name": "勾配調整プレート ±1寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934"]}, {"name": "勾配調整プレート ±1.5寸", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944"]}]}, "シビルスケア PC50": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "モダンベージュ", "オークブラウン"], "products": [{"name": "軒とい ×3600", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0130", "MQC1130", "MQC5130T", "MQC6130T", "MQCX130T", "MQCZ130T"]}, {"name": "軒継手（内押え/外パッチン）", "qty": "50", "unit": "個", "section": null, "codes": ["MQC0634", "MQC1634", "MQC5634", "MQC6634", "MQCX634J", "MQCZ634J"]}, {"name": "止まり（左右一組）", "qty": "50", "unit": "個", "section": null, "codes": ["MQC0635", "MQC1635", "MQC5635", "MQC6635", "MQCX635J", "MQCZ635J"]}, {"name": "外曲り（90°）", "qty": "20", "unit": "個", "section": null, "codes": ["MQC0431", "MQC1431", "MQC5431", "MQC6431", "MQCX431J", "MQCZ431J"]}, {"name": "内曲り（90°）", "qty": "20", "unit": "個", "section": null, "codes": ["MQC0430", "MQC1430", "MQC5430", "MQC6430", "MQCX430J", "MQCZ430J"]}, {"name": "外曲り（135°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0435", "MQC1435", "MQC5435", "MQC6435", "—", "—"]}, {"name": "内飾り板（直角280/90°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0032", "MQC1032", "MQC5032", "MQC6032", "—", "—"]}, {"name": "投げ板", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0033", "MQC1033", "MQC5033", "MQC6033", "—", "—"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "洋風集水器 PC50×60", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0334", "MQC1334", "MQC5334", "MQC6334", "—", "—"]}, {"name": "角集水器 PC50×PC30-S30", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0732", "MQC1732", "MQC5732", "MQC6732", "—", "—"]}, {"name": "角集水器 PC50×60", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0734", "MQC1734", "MQC5734", "MQC6734", "—", "—"]}, {"name": "角集水器 PC50×75", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0735", "MQC1735", "MQC5735", "MQC6735", "—", "—"]}, {"name": "F型集水器 PC50×PC30-S30-60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC07361", "MQC17361", "MQC57361", "MQC67361", "MQCX7361", "MQCZ7361"]}, {"name": "F型集水器 PC50×60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0738", "MQC1738", "MQC5738", "MQC6738", "MQCX738", "MQCZ738"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCX963", "MQCZ963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}, {"name": "自在ドレン 60（小）モダン/オーク", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "—", "—", "KQX941J", "KQZ941J"]}]}, "パラスケア U105": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "モダンベージュ", "オークブラウン"], "products": [{"name": "軒とい ×3600", "qty": "10", "unit": "個", "section": null, "codes": ["KBP0140", "KBP1140", "KBP5140T", "KBP6140T", "KBPX140T", "KBPZ140T"]}, {"name": "軒継手", "qty": "12", "unit": "個", "section": null, "codes": ["KBP06441", "KBP16441", "KBP56441", "KBP66441", "KBPX6441", "KBPZ6441"]}, {"name": "止まり（左右共用）", "qty": "20", "unit": "個", "section": null, "codes": ["KBP0645", "KBP1645", "KBP5645", "KBP6645", "KBPX645", "KBPZ645"]}, {"name": "曲り（90°）", "qty": "6", "unit": "個", "section": null, "codes": ["KBP0441", "KBP1441", "KBP5441", "KBP6441", "KBPX441", "KBPZ441"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "角集水器 エルボカン合", "qty": "10", "unit": "個", "section": null, "codes": ["KBP03421", "KBP13421", "KBP53421", "KBP63421", "KBPX3421", "KBPZ3421"]}, {"name": "F型集水器 エルボカン", "qty": "10", "unit": "個", "section": null, "codes": ["KBP07461", "KBP17461", "KBP57461", "KBP67461", "KBPX7461", "KBPZ7461"]}, {"name": "N型集水器 たてとい直結", "qty": "6", "unit": "個", "section": null, "codes": ["KBP0349", "KBP1349", "KBP5349", "KBP6349", "KBPX349", "KBPZ349"]}, {"name": "自在ドレン φ70 エルボ60カン(小)", "qty": "20", "unit": "個", "section": null, "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "KQX941J", "KQZ941J"]}]}, "アイアン丸105": {"colors": ["ミルクホワイト", "パールグレー", "ねずみ", "あか", "しんちゃ", "ブラック"], "products": [{"name": "軒とい 105×3600", "qty": "20", "unit": "個", "section": null, "codes": ["KQ01401", "KQ11401", "KQ21401", "KQ41401", "KQ51401", "KQ61401"]}, {"name": "軒継手（パッチン）105", "qty": "100", "unit": "個", "section": null, "codes": ["KQ0640", "KQ1640", "KQ2640", "KQ4640", "KQ5640", "KQ6640"]}, {"name": "止まり（左右共用）105", "qty": "50", "unit": "個", "section": null, "codes": ["KQ0645", "KQ1645", "KQ2645", "KQ4645", "KQ5645", "KQ6645"]}, {"name": "曲り（90°）105", "qty": "10", "unit": "個", "section": null, "codes": ["KQ0431", "KQ1431", "KQ2431", "KQ4431", "KQ5431", "KQ6431"]}, {"name": "自在エルボカン合 105", "qty": "10", "unit": "個", "section": null, "codes": ["KQ0941", "KQ1941", "KQ2941", "KQ4941", "KQ5941", "KQ6941"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "飾り集水器すかし 105×60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0748", "KQ1748", "KQ2748", "KQ4748", "KQ5748", "KQ6748"]}, {"name": "飾り集水器すかし 105×75", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "KQ1749", "KQ2749", "KQ4749", "KQ5749", "KQ6749"]}, {"name": "飾り集水器すかし 120×75", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "KQ1758", "KQ2758", "KQ4758", "KQ5758", "—"]}, {"name": "新集水器 105×75×60", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0345", "KQ1345", "KQ2345", "KQ4345", "KQ5345", "KQ6345"]}, {"name": "新集水器 120×90×75", "qty": "15", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "KQ1355", "KQ2355", "KQ4355", "KQ5355", "—"]}, {"name": "新集水器 75×45", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "—", "KQ4720", "KQ5720", "—"]}, {"name": "集水器 105×60", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0340", "KQ1340", "KQ2340", "KQ4340", "KQ5340", "KQ6340"]}, {"name": "パッチン集水器 105×60", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0747", "KQ1747", "KQ2747", "KQ4747", "KQ5747", "KQ6747"]}, {"name": "E型集水器 105×75×60", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0343", "KQ1343", "KQ2343", "KQ4343", "KQ5343", "KQ6343"]}, {"name": "F型集水器 105×60", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0347", "KQ1347", "KQ2347", "KQ4347", "KQ5347", "KQ6347"]}, {"name": "F型集水器 120×75", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "—", "KQ4357", "KQ5357", "—"]}, {"name": "N型集水器 105×60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0349", "KQ1349", "KQ2349", "KQ4349", "KQ5349", "KQ6349"]}]}, "S30": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "モダンベージュ", "オークグレー", "オークブラウン"], "products": [{"name": "たてとい S30×2700", "qty": "20", "unit": "個", "section": null, "codes": ["KBP0261", "KBP1261", "KBP5261", "KBP6261", "KBPD261", "KBPX261", "KBPZ261"]}, {"name": "エルボ（92°）", "qty": "10", "unit": "個", "section": null, "codes": ["KBP0523", "KBP1523", "KBP5523", "KBP6523", "KBPD523", "KBPX523", "KBPZ523"]}, {"name": "エルボ（145°）", "qty": "10", "unit": "個", "section": null, "codes": ["KBP0525", "KBP1525", "KBP5525", "KBP6525", "KBPD525", "KBPX525", "KBPZ525"]}, {"name": "マルチエルボ（100°〜135°）", "qty": "4", "unit": "個", "section": null, "codes": ["KBP0527", "KBP1527", "KBP5527", "KBP6527", "KBPD527", "KBPX527", "KBPZ527"]}, {"name": "たて継手", "qty": "12", "unit": "個", "section": null, "codes": ["KBP0823", "KBP1823", "KBP5823", "KBP6823", "KBPD823", "KBPX823", "KBPZ823"]}, {"name": "伸縮たて継手", "qty": "4", "unit": "個", "section": null, "codes": ["KBP08241", "KBP18241", "KBP58241", "KBP68241", "KBPD8241", "KBPX8241", "KBPZ8241"]}, {"name": "くるくる継手", "qty": "12", "unit": "個", "section": null, "codes": ["KBP0827", "KBP1827", "KBP5827", "KBP6827", "KBPD827", "KBPX827", "KBPZ827"]}, {"name": "P型集水器 たてとい直結", "qty": "4", "unit": "個", "section": null, "codes": ["KBP0828", "KBP1828", "KBP5828", "KBP6828", "KBPD828", "KBPX828", "KBPZ828"]}, {"name": "軒天ソケット エルボカン合", "qty": "8", "unit": "個", "section": null, "codes": ["MQC0914", "MQC1914", "MQC5914", "MQC6914", "MQCD914", "MQCX914", "MQCZ914"]}, {"name": "パッチン控 打込み（L=80）", "qty": "30", "unit": "個", "section": null, "codes": ["KBP7061S", "KBP7161S", "KBP7561S", "KBP7661S", "KBP7D61S", "KBP7X61S", "KBP7Z61S"]}]}, "瞬水S15": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "オークグレー", "モダンベージュ", "オークブラウン"], "products": [{"name": "たてとい S15×3000", "qty": "20", "unit": "個", "section": null, "codes": ["KBS0223", "KBS1223", "KBS5223", "KBS6223", "KBSD223", "KBSX223", "KBSZ223"]}, {"name": "エルボ（92°）", "qty": "12", "unit": "個", "section": null, "codes": ["KBS05231", "KBS15231", "KBS55231", "KBS65231", "KBSD5231", "KBSX5231", "KBSZ5231"]}, {"name": "エルボ（145°）", "qty": "12", "unit": "個", "section": null, "codes": ["KBS05251", "KBS15251", "KBS55251", "KBS65251", "KBSD5251", "KBSX5251", "KBSZ5251"]}, {"name": "マルチエルボ（100°〜135°）", "qty": "4", "unit": "個", "section": null, "codes": ["KBS05271", "KBS15271", "KBS55271", "KBS65271", "KBSD5271", "KBSX5271", "KBSZ5271"]}, {"name": "たて継手", "qty": "12", "unit": "個", "section": null, "codes": ["KBS0823", "KBS1823", "KBS5823", "KBS6823", "KBSD823", "KBSX823", "KBSZ823"]}, {"name": "伸縮たて継手", "qty": "4", "unit": "個", "section": null, "codes": ["KBS08241", "KBS18241", "KBS58241", "KBS68241", "KBSD8241", "KBSX8241", "KBSZ8241"]}, {"name": "くるくる継手", "qty": "12", "unit": "個", "section": null, "codes": ["KBS0827", "KBS1827", "KBS5827", "KBS6827", "KBSD827", "KBSX827", "KBSZ827"]}, {"name": "P型集水器 たてとい直結", "qty": "4", "unit": "個", "section": null, "codes": ["KBS0828", "KBS1828", "KBS5828", "KBS6828", "KBSD828", "KBSX828", "KBSZ828"]}, {"name": "飾りますエルボカン合", "qty": "4", "unit": "個", "section": null, "codes": ["KBS0325", "KBS1325", "KBS5325", "KBS6325", "KBSD325", "KBSX325", "KBSZ325"]}, {"name": "パッチン控 打込み（L=80）", "qty": "30", "unit": "個", "section": null, "codes": ["KBS80211", "KBS81211", "KBS85211", "KBS86211", "KBS8D211", "KBS8X211", "KBS8Z211"]}, {"name": "自在ドレン S15（落葉よけ付）", "qty": "4セット", "unit": "個", "section": "■ たて系列部材（追加）", "codes": ["KBS0920", "KBS1920", "KBS5920", "KBS6920", "KBSD920", "KBSX920", "KBSZ920"]}, {"name": "はしごい水下エルボ 一般地用 S15(90°)(L=80〜110)", "qty": "4", "unit": "個", "section": "■ たて系列部材（追加）", "codes": ["KBS09261", "KBS19261", "KBS59261", "KBS69261", "KBSD9261", "KBSX9261", "KBSZ9261"]}, {"name": "はしごい水下エルボ 積雪地用 S15(90°)(L=180〜210)", "qty": "4", "unit": "個", "section": "■ たて系列部材（追加）", "codes": ["KBS09281", "KBS19281", "KBS59281", "KBS69281", "KBSD9281", "KBSX9281", "KBSZ9281"]}, {"name": "角丸チューブた付 S15 枝管60・VP・VU50(91°〜95°)", "qty": "4", "unit": "個", "section": "■ たて系列部材（追加）", "codes": ["KBS03231", "KBS13231", "KBS53231", "KBS63231", "KBSD3231", "KBSX3231", "KBSZ3231"]}, {"name": "角ます S15", "qty": "4", "unit": "個", "section": "■ たて系列部材（追加）", "codes": ["KBS0322", "KBS1322", "KBS5322", "KBS6322", "KBSD322", "KBSX322", "KBSZ322"]}, {"name": "軒天ソケット S15", "qty": "8", "unit": "個", "section": "■ たて系列部材（追加）", "codes": ["KBS0924", "KBS1924", "KBS5924", "KBS6924", "KBSD924", "KBSX924", "KBSZ924"]}, {"name": "逆流防止継手 S15（特注品 KBP42）", "qty": "受注", "unit": "個", "section": "■ たて系列部材（追加）", "codes": ["特注", "特注", "特注", "特注", "特注", "特注", "特注"]}, {"name": "角排水管カバー S15 排水管VU50,VP・VU(65・75)", "qty": "4", "unit": "個", "section": "■ たて系列部材（追加）", "codes": ["KBS0620", "KBS1620", "KBS5620", "KBS6620", "KBSD620", "KBSX620", "KBSZ620"]}, {"name": "パッチン控 T足（L=60）S15", "qty": "30", "unit": "個", "section": "■ パッチン控（追加）", "codes": ["KBS80263", "KBS81263", "KBS85263", "KBS86263", "KBS8D263", "KBS8X263", "KBS8Z263"]}, {"name": "パッチン控 L足（L=40）S15", "qty": "30", "unit": "個", "section": "■ パッチン控（追加）", "codes": ["KBS80224", "KBS81224", "KBS85224", "KBS86224", "KBS8D224", "KBS8X224", "KBS8Z224"]}, {"name": "パッチン控 直足 S15", "qty": "30", "unit": "個", "section": "■ パッチン控（追加）", "codes": ["KBS80218", "KBS81218", "KBS85218", "KBS86218", "KBS8D218", "KBS8X218", "KBS8Z218"]}, {"name": "パッチン控 はしごい用 S15", "qty": "10", "unit": "個", "section": "■ パッチン控（追加）", "codes": ["KBS8027", "KBS8127", "KBS8527", "KBS8627", "KBS8D27", "KBS8X27", "KBS8Z27"]}]}, "たて系列60": {"colors": ["ミルクホワイト"], "products": [{"name": "メタリック調たてとい60 ×2700", "qty": "20", "unit": "個", "section": null, "codes": ["KQMS241"]}, {"name": "自在ドレン φ70 エルボカン合", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS941"]}, {"name": "エルボ（92°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS542"]}, {"name": "エルボ（145°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS545"]}, {"name": "スライドエルボ（100°〜135°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS547"]}, {"name": "たて継手", "qty": "20", "unit": "個", "section": null, "codes": ["KQMS842"]}, {"name": "伸縮たて継手", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS844"]}, {"name": "Ｐ型集水器 たてとい直結", "qty": "8", "unit": "個", "section": null, "codes": ["KQMS848"]}, {"name": "排水ます たてとい直結（93°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS947"]}, {"name": "化粧ます たてとい直結", "qty": "8", "unit": "個", "section": null, "codes": ["KQMS945"]}, {"name": "軒天ソケット エルボカン合", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS942"]}, {"name": "逆流防止 たてとい直結", "qty": "4", "unit": "個", "section": null, "codes": ["KQMS346"]}, {"name": "排水管カバー（0〜21 排水管）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS648"]}, {"name": "切断治具 60", "qty": "4", "unit": "個", "section": null, "codes": ["KQ694Z"]}, {"name": "パッチン控 打込み（ステンレス）", "qty": "50", "unit": "個", "section": null, "codes": ["KQ8S48S"]}]}, "たてとい60": {"colors": ["ミルクホワイト", "パールグレー", "ねずみ", "あか", "しんちゃ", "ブラック", "オークグレー", "モダンベージュ", "オークブラウン"], "products": [{"name": "たてとい 60×2700（標準色）", "qty": "30", "unit": "個", "section": null, "codes": ["KQ0241", "KQ1241", "—", "—", "KQ5241T", "KQ6241T", "—", "—", "—"]}, {"name": "たてとい 60×2700（追加色）", "qty": "20", "unit": "個", "section": null, "codes": ["—", "—", "KQ2241TJ", "KQ4241TJ", "—", "—", "KQD241TJ", "KQX241TJ", "KQZ241TJ"]}, {"name": "エルボ（90°）", "qty": "50", "unit": "個", "section": null, "codes": ["KQ0542", "KQ1542", "KQ2542", "KQ4542", "KQ5542", "KQ6542", "KQD542J", "KQX542J", "KQZ542J"]}, {"name": "エルボ（105°）", "qty": "100", "unit": "個", "section": null, "codes": ["KQ0540", "KQ1540", "KQ2540", "KQ4540", "KQ5540", "KQ6540", "KQD540J", "KQX540J", "KQZ540J"]}, {"name": "回転エルボ（90°〜180°）", "qty": "50", "unit": "個", "section": null, "codes": ["KQ0546", "KQ1546", "KQ2546J", "KQ4546J", "KQ5546", "KQ6546", "KQD546J", "KQX546J", "KQZ546J"]}, {"name": "スライドエルボ（100°〜135°）", "qty": "30", "unit": "個", "section": null, "codes": ["KQ0547", "KQ1547", "KQ2547J", "KQ4547J", "KQ5547", "KQ6547", "KQD547J", "KQX547J", "KQZ547J"]}, {"name": "たて継手 60", "qty": "100", "unit": "個", "section": null, "codes": ["KQ0840", "KQ1840", "KQ2840", "KQ4840", "KQ5840", "KQ6840", "KQD840J", "KQX840J", "KQZ840J"]}, {"name": "伸縮たて継手 60", "qty": "10", "unit": "個", "section": null, "codes": ["KQ0844", "KQ1844", "KQ2844", "KQ4844", "KQ5844", "KQ6844", "KQD844", "KQX844", "KQZ844"]}, {"name": "P型集水器 たてとい直結", "qty": "20", "unit": "個", "section": null, "codes": ["KQ0848", "KQ1848", "KQ2848J", "KQ4848J", "KQ5848", "KQ6848", "KQD848J", "KQX848J", "KQZ848J"]}, {"name": "自在ドレン φ70 エルボカン合(小)", "qty": "20", "unit": "個", "section": null, "codes": ["KQ0941", "KQ1941", "KQ2941", "—", "KQ5941", "KQ6941", "KQD941J", "KQX941J", "KQZ941J"]}, {"name": "角ます マルチエルボカン合", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0312", "MQC1312", "MQC2312", "—", "MQC5312", "MQC6312", "MQCD312", "MQCX312", "MQCZ312"]}, {"name": "軒天ソケット エルボカン合", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0914", "MQC1914", "MQC2914", "—", "MQC5914", "MQC6914", "MQCD914", "MQCX914", "MQCZ914"]}, {"name": "逆流防止 たてとい直結", "qty": "4", "unit": "個", "section": null, "codes": ["KQ03M46G", "KQ13M46", "KQ23M46", "KQ43M46", "KQ53M46", "KQ63M46", "KQDM46", "KQX3M46G", "KQZ3M46"]}, {"name": "排水管カバー 60（0〜21）", "qty": "10", "unit": "個", "section": null, "codes": ["KQ06481", "KQ16481", "KQ26481", "KQ46481", "KQ56481", "KQ66481", "KQD6481", "KQX6481", "KQZ6481"]}, {"name": "シンプルエルボ（92°）", "qty": "30", "unit": "個", "section": null, "codes": ["KQS0542", "KQS1542", "—", "—", "KQS5542", "KQS6542", "KQSD542", "KQSX542", "KQSZ542"]}, {"name": "シンプルエルボ（145°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQS0545", "KQS1545", "—", "—", "KQS5545", "KQS6545", "KQSD545", "KQSX545", "KQSZ545"]}, {"name": "シンプルスライドエルボ（100°〜135°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQS0547", "KQS1547", "—", "—", "KQS5547", "KQS6547", "KQSD547", "KQSX547", "KQSZ547"]}, {"name": "シンプルマルチ継手", "qty": "20", "unit": "個", "section": null, "codes": ["KQS0841", "KQS1841", "—", "—", "KQS5841", "KQS6841", "KQSD841", "KQSX841", "KQSZ841"]}, {"name": "パッチン控 打込み（L=90）", "qty": "100", "unit": "個", "section": null, "codes": ["KQ80481", "KQ81481", "—", "—", "KQ85481", "KQ86481", "—", "—", "—"]}, {"name": "パッチン控 打込み（L=120）", "qty": "30", "unit": "個", "section": null, "codes": ["KQ80485", "KQ81485", "KQ82485", "KQ84485", "KQ85485", "KQ86485", "KQ8D485", "KQ8X485", "KQ8Z485"]}, {"name": "切断治具 60", "qty": "4", "unit": "個", "section": null, "codes": ["KQ694Z", "KQ694Z", "KQ694Z", "KQ694Z", "KQ694Z", "KQ694Z", "KQ694Z", "KQ694Z", "KQ694Z"]}], "Archi-spec TOI AG120": {"colors": ["ディープブラウン", "スレートブラック", "マットシルバー"], "products": [{"name": "軒とい AG120×4000", "qty": "4", "unit": "個", "section": null, "codes": ["KZA5160", "KZA6160", "KZAS160"]}, {"name": "軒継手（外パッチン+内押え）", "qty": "6", "unit": "個", "section": null, "codes": ["KZA5664", "KZA6664", "KZAS664"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["KZA5665", "KZA6665", "KZAS665"]}, {"name": "外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["KZA5461", "KZA6461", "KZAS461"]}, {"name": "内曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["KZA5460", "KZA6460", "KZAS460"]}, {"name": "内飾り板（90°）", "qty": "1", "unit": "個", "section": null, "codes": ["KZA5064", "KZA6064", "KZAS064"]}, {"name": "軒といストッパー Ⅰ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ69131", "MQ69131", "MQ69131"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922"]}, {"name": "自在ドレン AG120×45", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["KZA0920", "KZA6920", "KZAD920"]}]}, "サーフェスケア FS-Ⅱ型": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "オークグレー", "コアグレー", "モダンベージュ", "アイボリー", "モダンベージュ2"], "products": [{"name": "軒とい FS-Ⅱ型×4000", "qty": "4", "unit": "個", "section": null, "codes": ["MQSD140", "MQSD1140", "MQSD3140", "MQSD5140", "MQSD6140", "MQSDN140", "MQSDT140", "MQSDN40", "MQSDX140"]}, {"name": "軒継手（内パッチン）", "qty": "6", "unit": "個", "section": null, "codes": ["MQSD624", "MQSD1624", "MQSD3624", "MQSD5624", "MQSD6624", "MQSDN624", "MQSDT624", "MQSDN24", "MQSDX624"]}, {"name": "二重パッチン軒継手", "qty": "6", "unit": "個", "section": null, "codes": ["MQSD06441", "MQSD16441", "MQSD36441", "MQSD56441", "MQSD66441", "MQSDN6441", "MQSDT6441", "MQSDN441", "MQSDX6441"]}, {"name": "伸縮継手（二式）", "qty": "2", "unit": "個", "section": null, "codes": ["MQSD0646", "MQSD1646", "MQSD3646", "MQSD5646", "MQSD6646", "MQSDN646", "MQSDT646", "MQSDN46", "MQSDX646"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQSD0645", "MQSD1645", "MQSD3645", "MQSD5645", "MQSD6645", "MQSDN645", "MQSDT645", "MQSDN45", "MQSDX645"]}, {"name": "内パッチン外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQSD0447", "MQSD1447", "MQSD3447", "MQSD5447", "MQSD6447", "MQSDN447", "MQSDT447", "MQSDN47", "MQSDX447"]}, {"name": "内曲り（寄込み）（90°）", "qty": "2", "unit": "個", "section": null, "codes": ["MQSD0446", "MQSD1446", "MQSD3446", "MQSD5446", "MQSD6446", "MQSDN446", "MQSDT446", "MQSDN46", "MQSDX446"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "F型集水器 FS-Ⅱ×PC30-S30-60", "qty": "8", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQSD03401", "MQSD13401", "MQSD33401", "MQSD53401", "MQSD63401", "MQSDN3401", "MQSDT3401", "MQSDN401", "MQSDX3401"]}, {"name": "F型集水器 FS-Ⅱ×VU100", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQSD03422", "MQSD13422", "MQSD33422", "MQSD53422", "MQSD63422", "MQSDN3422", "MQSDT3422", "MQSDN422", "MQSDX3422"]}, {"name": "自在ドレン たてとい60（小）", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQCDS941", "MQCS1941", "—", "MQCS6941", "—", "—", "—", "—", "—"]}]}, "サーフェスケア FS-Ⅰ型": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "オークグレー", "モダンベージュ"], "products": [{"name": "軒とい FS-Ⅰ型×4000", "qty": "4", "unit": "個", "section": null, "codes": ["MQS0130", "MQS1130", "MQS5130", "MQS6130", "MQSD130", "MQSX130"]}, {"name": "軒継手（内パッチン）", "qty": "6", "unit": "個", "section": null, "codes": ["MQS0604", "MQS1604", "MQS5604", "MQS6604", "MQSD604", "MQSX604"]}, {"name": "二重パッチン軒継手", "qty": "6", "unit": "個", "section": null, "codes": ["MQS06041", "MQS16041", "MQS56041", "MQS66041", "MQSD6041", "MQSX6041"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQS0635", "MQS1635", "MQS5635", "MQS6635", "MQSD635", "MQSX635"]}, {"name": "内パッチン外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQS0437", "MQS1437", "MQS5437", "MQS6437", "MQSD437", "MQSX437"]}, {"name": "内曲り（寄込み）（90°）", "qty": "2", "unit": "個", "section": null, "codes": ["MQS0436", "MQS1436", "MQS5436", "MQS6436", "MQSD436", "MQSX436"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "外パッチン補修部材（密着可）", "qty": "10", "unit": "個", "section": null, "codes": ["MQS06042", "MQS16042", "MQS56042", "MQS66042", "MQSD6042", "MQSX6042"]}, {"name": "F型集水器 FS-Ⅰ×PC30-S30-60", "qty": "8", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQS03301", "MQS13301", "MQS53301", "MQS63301", "MQSD3301", "MQSX3301"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCX963", "MQCZ963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}]}, "グランスケア PGR60": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "モダンベージュ", "オークブラウン"], "products": [{"name": "軒とい PGR60×3600", "qty": "8", "unit": "個", "section": null, "codes": ["MQG0130", "MQG1130", "MQG5130", "MQG6130", "MQGX130", "MQGZ130"]}, {"name": "軒継手（2重パッチン+内押え）", "qty": "12", "unit": "個", "section": null, "codes": ["MQG0634", "MQG1634", "MQG5634", "MQG6634", "MQGX634", "MQGZ634"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQG0635", "MQG1635", "MQG5635", "MQG6635", "MQGX635", "MQGZ635"]}, {"name": "外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQG0431", "MQG1431", "MQG5431", "MQG6431", "MQGX431", "MQGZ431"]}, {"name": "内曲り（90°）", "qty": "2", "unit": "個", "section": null, "codes": ["MQG0430", "MQG1430", "MQG5430", "MQG6430", "MQGX430", "MQGZ430"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "内飾り板横流し（90°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0032", "MQC1032", "MQC5032", "MQC6032", "—", "—"]}, {"name": "投げ板", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0033", "MQC1033", "MQC5033", "MQC6033", "—", "—"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "F型集水器 PGR60×PC30-S30-60", "qty": "8", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQG03301J", "MQG13301J", "MQG53301J", "MQG63301J", "—", "—"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCX963", "MQCZ963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}]}, "ファインスケア NF-I型": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "モダンベージュ", "オークブラウン"], "products": [{"name": "軒とい NF-I型×3600", "qty": "4", "unit": "個", "section": null, "codes": ["MQF0180J", "MQF1180J", "MQF5180J", "MQF6180J", "MQFX180J", "MQFZ180J"]}, {"name": "軒継手（外パッチン+内押え）", "qty": "12", "unit": "個", "section": null, "codes": ["MQF0684", "MQF1684", "MQF5684", "MQF6684", "MQFX684", "MQFZ684"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQF0685", "MQF1685", "MQF5685", "MQF6685", "MQFX685", "MQFZ685"]}, {"name": "外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQF0481", "MQF1481", "MQF5481", "MQF6481", "MQFX481", "MQFZ481"]}, {"name": "内曲り（90°）", "qty": "2", "unit": "個", "section": null, "codes": ["MQF0480", "MQF1480", "MQF5480", "MQF6480", "MQFX480", "MQFZ480"]}, {"name": "軒といストッパー Ⅰ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ69131", "MQ69131", "MQ69131", "MQ69131", "MQ69131", "MQ69131"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "F型集水器 NF-I×PC30-S30×60", "qty": "8", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQF03801", "MQF13801", "MQF53801", "MQF63801", "MQFX3801", "MQFZ3801"]}, {"name": "F型集水器 NF-I×75", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQF0384", "MQF1384", "MQF5384", "MQF6384", "—", "—"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCX963", "MQCZ963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}]}, "ジェイスケア PJ70": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "モダンベージュ", "オークブラウン"], "products": [{"name": "軒とい PJ70×3600", "qty": "10", "unit": "個", "section": null, "codes": ["MQJ0130", "MQJ1130", "MQJ5130", "MQJ6130", "MQJX130", "MQJZ130"]}, {"name": "軒継手（外パッチン+内押え）", "qty": "20", "unit": "個", "section": null, "codes": ["MQJ0636", "MQJ1636", "MQJ5636", "MQJ6636", "MQJX636", "MQJZ636"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQJ0635", "MQJ1635", "MQJ5635", "MQJ6635", "MQJX635", "MQJZ635"]}, {"name": "デザイン止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQJ0631", "MQJ1631", "MQJ5631", "MQJ6631", "MQJX631", "MQJZ631"]}, {"name": "外曲り（90°）", "qty": "8", "unit": "個", "section": null, "codes": ["MQJ0431", "MQJ1431", "MQJ5431", "MQJ6431", "MQJX431", "MQJZ431"]}, {"name": "内曲り（90°）", "qty": "6", "unit": "個", "section": null, "codes": ["MQJ0430", "MQJ1430", "MQJ5430", "MQJ6430", "MQJX430", "MQJZ430"]}, {"name": "内飾り板（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQJ0032", "MQJ1032", "MQJ5032", "MQJ6032", "MQJX032", "MQJZ032"]}, {"name": "投げ板", "qty": "4", "unit": "個", "section": null, "codes": ["MQJ0033", "MQJ1033", "MQJ5033", "MQJ6033", "MQJX033", "MQJZ033"]}, {"name": "てらい水下（PJ70 本体+内パッチン）", "qty": "4", "unit": "個", "section": null, "codes": ["—", "—", "MQJ5433", "MQJ6433", "—", "—"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "F型集水器 PJ70×PC30-S30-60", "qty": "8", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQJ03391", "MQJ13391", "MQJ53391", "MQJ63391", "—", "—"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCX963", "MQCZ963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}]}, "シビルスケア PC77": {"colors": ["ミルクホワイト", "しんちゃ", "ブラック"], "products": [{"name": "軒とい PC77×3600", "qty": "8", "unit": "個", "section": null, "codes": ["MQC0140", "MQC5140T", "MQC6140T"]}, {"name": "軒継手（外パッチン+内押え）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0644", "MQC5644", "MQC6644"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQC0645", "MQC5645", "MQC6645"]}, {"name": "外曲り（90°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0441", "MQC5441", "MQC6441"]}, {"name": "内曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQC0440", "MQC5440", "MQC6440"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922"]}, {"name": "落葉止め PC77×1000", "qty": "10", "unit": "セット", "section": null, "codes": ["MQC9941", "MQC9941", "MQC9941"]}, {"name": "集水器 PC77×PC30-S30", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0346", "MQC5346", "MQC6346"]}, {"name": "集水器 PC77×60", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0344", "MQC5344", "MQC6344"]}, {"name": "集水器 PC77×75×60", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0343", "MQC5343", "MQC6343"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC5963", "MQC6963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ5941", "KQ6941"]}]}, "たてとい PC30": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック"], "products": [{"name": "たてとい PC30×2700", "qty": "20", "unit": "個", "section": null, "codes": ["MQC0261", "MQC1261", "MQC5261", "MQC6261"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963"]}, {"name": "自在ドレン PC30-S30（小）縦", "qty": "20", "unit": "個", "section": null, "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963"]}, {"name": "エルボ（92°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC05631", "MQC15631", "MQC55631", "MQC65631"]}, {"name": "エルボ（105°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC05621", "MQC15621", "MQC55621", "MQC65621"]}, {"name": "エルボ（145°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC05651", "MQC15651", "MQC55651", "MQC65651"]}, {"name": "横エルボ", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0564", "MQC1564", "MQC5564", "MQC6564"]}, {"name": "たて継手（内締め方式）", "qty": "20", "unit": "個", "section": null, "codes": ["MQC08601", "MQC18601", "MQC58601", "MQC68601"]}, {"name": "伸縮たて継手", "qty": "4", "unit": "個", "section": null, "codes": ["MQC0864", "MQC1864", "MQC5864", "MQC6864"]}, {"name": "くるくる継手（92°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC08671", "MQC18671", "MQC58671", "MQC68671"]}, {"name": "角九エルボ（90°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0861", "MQC1861", "MQC5861", "MQC6861"]}, {"name": "P型集水器 たてとい直結", "qty": "20", "unit": "個", "section": null, "codes": ["MQC0868", "MQC1868", "MQC5868", "MQC6868"]}, {"name": "飾りますマルチ（兼L1）", "qty": "4", "unit": "個", "section": null, "codes": ["MQC0315", "MQC1315", "MQC5315", "MQC6315"]}, {"name": "パッチン控 打込み（L=80）", "qty": "30", "unit": "個", "section": "■ 控金具", "codes": ["MQC07061S", "MQC17061S", "MQC57061S", "MQC67061S"]}, {"name": "パッチン控 打込み（L=50）", "qty": "30", "unit": "個", "section": "■ 控金具", "codes": ["MQC070631S", "MQC170631S", "MQC570631S", "MQC670631S"]}]}, "メタリック調たてとい KQM60": {"colors": ["ステンシルバー"], "products": [{"name": "たてとい KQM60×2700", "qty": "20", "unit": "個", "section": null, "codes": ["KQMS241"]}, {"name": "自在ドレン φ70 エルボカン合", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS941"]}, {"name": "エルボ（92°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS542"]}, {"name": "エルボ（145°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS545"]}, {"name": "スライドエルボ（100°〜135°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS547"]}, {"name": "たて継手", "qty": "20", "unit": "個", "section": null, "codes": ["KQMS842"]}, {"name": "伸縮たて継手", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS844"]}, {"name": "P型集水器 たてとい直結", "qty": "8", "unit": "個", "section": null, "codes": ["KQMS848"]}, {"name": "排水ます たてとい直結（93°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS947"]}, {"name": "化粧ます たてとい直結", "qty": "8", "unit": "個", "section": null, "codes": ["KQMS945"]}, {"name": "軒天ソケット エルボカン合", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS942"]}, {"name": "逆流防止 たてとい直結", "qty": "4", "unit": "個", "section": null, "codes": ["KQMS346"]}, {"name": "パッチン控 打込み（ステンレス）", "qty": "50", "unit": "個", "section": null, "codes": ["KQ8S48S"]}]}}, "Archi-spec TOI AG120": {"colors": ["ディープブラウン", "スレートブラック", "マットシルバー"], "products": [{"name": "軒とい AG120×4000", "qty": "4", "unit": "個", "section": null, "codes": ["KZA5160", "KZA6160", "KZAS160"]}, {"name": "軒継手（外パッチン+内押え）", "qty": "6", "unit": "個", "section": null, "codes": ["KZA5664", "KZA6664", "KZAS664"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["KZA5665", "KZA6665", "KZAS665"]}, {"name": "外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["KZA5461", "KZA6461", "KZAS461"]}, {"name": "外曲り（90°）勾配隠し用", "qty": "1", "unit": "個", "section": null, "codes": ["○KZA5461□□", "○KZA6461□□", "○KZAS461□□"]}, {"name": "内曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["KZA5460", "KZA6460", "KZAS460"]}, {"name": "内曲り（90°）勾配隠し用", "qty": "1", "unit": "個", "section": null, "codes": ["○KZA5460□□", "○KZA6460□□", "○KZAS460□□"]}, {"name": "内飾り板（90°）", "qty": "1", "unit": "個", "section": null, "codes": ["KZA5064", "KZA6064", "KZAS064"]}, {"name": "軒といストッパー Ⅰ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ69131", "MQ69131", "MQ69131"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922"]}, {"name": "導水板 AG120×2000", "qty": "8", "unit": "個", "section": "■ 吊具・補材", "codes": ["KZA5060", "KZA6060", "KZAS060"]}, {"name": "掃除口カバー AG120×600", "qty": "4", "unit": "個", "section": "■ 吊具・補材", "codes": ["KZA5669", "KZA6669", "KZAS669"]}, {"name": "導水板取付具 AG120", "qty": "50", "unit": "個", "section": "■ 吊具・補材", "codes": ["KZA6925PM", "KZA6925PM", "KZA6925PM"]}, {"name": "背面導水板 AG120×2000", "qty": "8", "unit": "個", "section": "■ 吊具・補材", "codes": ["—", "KZA6069", "—"]}, {"name": "補修塗料 80g/缶", "qty": "1", "unit": "缶", "section": "■ 吊具・補材", "codes": ["KZA8580", "KZA8680", "KZAS80"]}, {"name": "加工用平板 329mm×0.35mm×10m", "qty": "1", "unit": "個", "section": "■ 吊具・補材", "codes": ["KZA5165", "KZA6165", "KZAS165"]}, {"name": "吊具（高強度）正面打出なし15mm固定式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["KZA96600PB", "KZA96600PB", "KZA96600PB"]}, {"name": "吊具（高強度）正面打20〜50mm出スライド式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["KZA96610PB", "KZA96610PB", "KZA96610PB"]}, {"name": "自在ドレン AG120×45（落葉よけ付）", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["KZA0920", "KZA5920", "KZA6920"]}, {"name": "自在ドレン AG120×45 垂直", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["KZA0921", "KZA5921", "KZA6921"]}, {"name": "たてとい 45×3000", "qty": "8", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0223", "KZA5223", "KZA6223"]}, {"name": "自在ドレン（落葉よけ付）AG120×45", "qty": "4", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0920", "KZA5920", "KZA6920"]}, {"name": "穴あけ治具 AG120×45", "qty": "50", "unit": "個", "section": "■ たて系列45", "codes": ["KZA992Y", "KZA992Y", "KZA992Y"]}, {"name": "エルボ（92°）45", "qty": "8", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0522", "KZA5522", "KZA6522"]}, {"name": "エルボ（105°）45", "qty": "8", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0521", "KZA5521", "KZA6521"]}, {"name": "スライドエルボ（100°〜135°）45", "qty": "8", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0527", "KZA5527", "KZA6527"]}, {"name": "たて継手 45（内締め方式）", "qty": "10", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0820", "KZA5820", "KZA6820"]}, {"name": "伸縮たて継手 45", "qty": "4", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0824", "KZA5824", "KZA6824"]}, {"name": "P型集水器 たてとい直結 45", "qty": "4", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0828", "KZA5828", "KZA6828"]}, {"name": "化粧ます たてとい直結 45", "qty": "4", "unit": "個", "section": "■ たて系列45", "codes": ["KZA09251", "KZA59251", "KZA69251"]}, {"name": "排水ます 45（93°）枝管60・VU50", "qty": "4", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0927", "KZA5927", "KZA6927"]}, {"name": "排水管カバー 45", "qty": "8", "unit": "個", "section": "■ たて系列45", "codes": ["KZA0628", "KZA5628", "KZA6628"]}, {"name": "軒天ソケット たてとい直結 45", "qty": "4", "unit": "個", "section": "■ たて系列45", "codes": ["KZA09241", "KZA59241", "KZA69241"]}, {"name": "切断治具 45", "qty": "20", "unit": "個", "section": "■ たて系列45", "codes": ["KZA692Z", "KZA692Z", "KZA692Z"]}, {"name": "パッチン控 打込み 45（L=13mm）", "qty": "50", "unit": "個", "section": "■ 控金具", "codes": ["KZA80281S", "KZA85281S", "KZA86281S"]}, {"name": "パッチン控 鉄骨用 45（L=13mm）", "qty": "50", "unit": "個", "section": "■ 控金具", "codes": ["KZA80236S", "KZA85236S", "KZA86236S"]}, {"name": "パッチン控 鉄骨用 45（L=25mm）", "qty": "50", "unit": "個", "section": "■ 控金具", "codes": ["KZA80235S", "KZA85235S", "KZA86235S"]}, {"name": "パッチン控 鉄骨用 45（L=50mm）", "qty": "50", "unit": "個", "section": "■ 控金具", "codes": ["KZA80231S", "KZA85231S", "KZA86231S"]}]}, "サーフェスケア FS-Ⅱ型": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "オークグレー", "コアグレー", "モダンベージュ", "アイボリー", "モダンベージュ2"], "products": [{"name": "軒とい FS-Ⅱ型×4000", "qty": "4", "unit": "個", "section": null, "codes": ["MQSD140", "MQSD1140", "MQSD3140", "MQSD5140", "MQSD6140", "MQSDN140", "MQSDT140", "MQSDN40", "MQSDX140"]}, {"name": "軒継手（内パッチン）", "qty": "6", "unit": "個", "section": null, "codes": ["MQSD0624", "MQSD1624", "MQSD3624", "MQSD5624", "MQSD6624", "MQSDN624", "MQSDT624", "MQSDN624", "MQSDX624"]}, {"name": "二重パッチン軒継手", "qty": "6", "unit": "個", "section": null, "codes": ["MQSD06441", "MQSD16441", "MQSD36441", "MQSD56441", "MQSD66441", "MQSDN6441", "MQSDT6441", "MQSDN6441", "MQSDX6441"]}, {"name": "伸縮継手（二式）", "qty": "2", "unit": "個", "section": null, "codes": ["MQSD0646", "MQSD1646", "MQSD3646", "MQSD5646", "MQSD6646", "MQSDN646", "MQSDT646", "MQSDN646", "MQSDX646"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQSD0645", "MQSD1645", "MQSD3645", "MQSD5645", "MQSD6645", "MQSDN645", "MQSDT645", "MQSDN645", "MQSDX645"]}, {"name": "内パッチン外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQSD0447", "MQSD1447", "MQSD3447", "MQSD5447", "MQSD6447", "MQSDN447", "MQSDT447", "MQSDN447", "MQSDX447"]}, {"name": "内曲り（寄込み）（90°）", "qty": "2", "unit": "個", "section": null, "codes": ["MQSD0446", "MQSD1446", "MQSD3446", "MQSD5446", "MQSD6446", "MQSDN446", "MQSDT446", "MQSDN446", "MQSDX446"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "外パッチン補修部材（密着可）", "qty": "10", "unit": "個", "section": null, "codes": ["MQSD06442", "MQSD16442", "MQSD36442", "MQSD56442", "MQSD66442", "MQSDN6442", "MQSDT6442", "MQSDN6442", "MQSDX6442"]}, {"name": "切断治具 FS-Ⅱ型", "qty": "4", "unit": "個", "section": null, "codes": ["MQS1A201", "MQS1A201", "MQS1A201", "MQS1A201", "MQS1A201", "MQS1A201", "MQS1A201", "MQS1A201", "MQS1A201"]}, {"name": "切断工具用スペーサー（ステンレス）", "qty": "10", "unit": "個", "section": null, "codes": ["MQS9A32S", "MQS9A32S", "MQS9A32S", "MQS9A32S", "MQS9A32S", "MQS9A32S", "MQS9A32S", "MQS9A32S", "MQS9A32S"]}, {"name": "F型集水器 FS-Ⅱ×PC30-S30-60", "qty": "8", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQS03401", "MQS13401", "MQS33401", "MQS53401", "MQS63401", "MQSDN3401", "MQSDT3401", "MQSDN3401", "MQSDX3401"]}, {"name": "F型集水器 FS-Ⅱ×VU100（Chic Line対応）", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQS03422", "MQS13422", "MQS33422", "MQS53422", "MQS63422", "MQSDN3422", "MQSDT3422", "MQSDN3422", "MQSDX3422"]}, {"name": "自在ドレン たてとい60（小）PC30-S30", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0962", "MQC1962", "—", "MQC5962", "MQC6962", "MQC0962", "—", "—", "—"]}, {"name": "自在ドレン たてとい60（小）", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "—", "MQC5963", "MQC6963", "MQC0963", "—", "—", "—"]}, {"name": "吊具（高強度）正面打出なし10mm固定式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS99400PB", "MQS99400PB", "MQS99400PB", "MQS99400PB", "MQS99400PB", "MQS99400PB", "MQS99400PB", "MQS99400PB", "MQS99400PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式3寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS99433PB", "MQS99433PB", "MQS99433PB", "MQS99433PB", "MQS99433PB", "MQS99433PB", "MQS99433PB", "MQS99433PB", "MQS99433PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式4寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS99434PB", "MQS99434PB", "MQS99434PB", "MQS99434PB", "MQS99434PB", "MQS99434PB", "MQS99434PB", "MQS99434PB", "MQS99434PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS99435PB", "MQS99435PB", "MQS99435PB", "MQS99435PB", "MQS99435PB", "MQS99435PB", "MQS99435PB", "MQS99435PB", "MQS99435PB"]}, {"name": "勾配調整プレート ±0.5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924"]}, {"name": "勾配調整プレート ±1寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934"]}, {"name": "勾配調整プレート ±1.5寸", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944"]}, {"name": "折版屋根用吊具スライド式（内吊式）", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["○MQS9947S", "○MQS9947S", "○MQS9947S", "○MQS9947S", "○MQS9947S", "○MQS9947S", "○MQS9947S", "○MQS9947S", "○MQS9947S"]}, {"name": "折版屋根用吊具スライド式（外吊式）", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["○MQS9948S", "○MQS9948S", "○MQS9948S", "○MQS9948S", "○MQS9948S", "○MQS9948S", "○MQS9948S", "○MQS9948S", "○MQS9948S"]}, {"name": "ナット回転ストッパー 折板屋根用", "qty": "60", "unit": "個", "section": "■ 吊具", "codes": ["MQ9640", "MQ9640", "MQ9640", "MQ9640", "MQ9640", "MQ9640", "MQ9640", "MQ9640", "MQ9640"]}]}, "サーフェスケア FS-Ⅰ型": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "オークグレー", "モダンベージュ"], "products": [{"name": "軒とい FS-Ⅰ型×4000", "qty": "4", "unit": "個", "section": null, "codes": ["MQS0130", "MQS1130", "MQS5130", "MQS6130", "MQSD130", "MQSX130"]}, {"name": "軒継手（内パッチン）", "qty": "6", "unit": "個", "section": null, "codes": ["MQS0604", "MQS1604", "MQS5604", "MQS6604", "MQSD604", "MQSX604"]}, {"name": "二重パッチン軒継手", "qty": "6", "unit": "個", "section": null, "codes": ["MQS06041", "MQS16041", "MQS56041", "MQS66041", "MQSD6041", "MQSX6041"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQS0635", "MQS1635", "MQS5635", "MQS6635", "MQSD635", "MQSX635"]}, {"name": "内パッチン外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQS0437", "MQS1437", "MQS5437", "MQS6437", "MQSD437", "MQSX437"]}, {"name": "内曲り（寄込み）（90°）", "qty": "2", "unit": "個", "section": null, "codes": ["MQS0436", "MQS1436", "MQS5436", "MQS6436", "MQSD436", "MQSX436"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "外パッチン補修部材（密着可）", "qty": "10", "unit": "個", "section": null, "codes": ["MQS06042", "MQS16042", "MQS56042", "MQS66042", "MQSD6042", "MQSX6042"]}, {"name": "切断治具 FS-Ⅰ型", "qty": "4", "unit": "個", "section": null, "codes": ["MQS6A30", "MQS6A30", "MQS6A30", "MQS6A30", "MQS6A30", "MQS6A30"]}, {"name": "切断工具用スペーサー（ステンレス）", "qty": "10", "unit": "個", "section": null, "codes": ["MQS9A32S", "MQS9A32S", "MQS9A32S", "MQS9A32S", "MQS9A32S", "MQS9A32S"]}, {"name": "F型集水器 FS-Ⅰ×PC30-S30×60", "qty": "8", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQS03301", "MQS13301", "MQS53301", "MQS63301", "MQSD3301", "MQSX3301"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCX963", "MQCZ963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}, {"name": "吊具（高強度）正面打出なし13mm固定式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS990001PB", "MQS990001PB", "MQS990001PB", "MQS990001PB", "MQS990001PB", "MQS990001PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式3寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS99033PB", "MQS99033PB", "MQS99033PB", "MQS99033PB", "MQS99033PB", "MQS99033PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式4寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS99034PB", "MQS99034PB", "MQS99034PB", "MQS99034PB", "MQS99034PB", "MQS99034PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS99035PB", "MQS99035PB", "MQS99035PB", "MQS99035PB", "MQS99035PB", "MQS99035PB"]}, {"name": "勾配調整プレート ±0.5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924"]}, {"name": "勾配調整プレート ±1寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934"]}, {"name": "勾配調整プレート ±1.5寸", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944"]}, {"name": "折版屋根用吊具スライド式（内吊式）", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["○MQS9947S", "○MQS9947S", "○MQS9947S", "○MQS9947S", "○MQS9947S", "○MQS9947S"]}, {"name": "折版屋根用吊具スライド式（外吊式）", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["○MQS9948S", "○MQS9948S", "○MQS9948S", "○MQS9948S", "○MQS9948S", "○MQS9948S"]}, {"name": "ナット回転ストッパー 折板屋根用", "qty": "60", "unit": "個", "section": "■ 吊具", "codes": ["MQ9640", "MQ9640", "MQ9640", "MQ9640", "MQ9640", "MQ9640"]}, {"name": "マルチカバーI型・II型取付具（ポリカーボネート）", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS9925PM", "MQS9925PM", "MQS9925PM", "MQS9925PM", "MQS9925PM", "MQS9925PM"]}]}, "グランスケア PGR60": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "モダンベージュ", "オークブラウン"], "products": [{"name": "軒とい PGR60×3600", "qty": "8", "unit": "個", "section": null, "codes": ["MQG0130", "MQG1130", "MQG5130", "MQG6130", "MQGX130", "MQGZ130"]}, {"name": "軒継手（2重パッチン）", "qty": "12", "unit": "個", "section": null, "codes": ["MQG0634", "MQG1634", "MQG5634", "MQG6634", "MQGX634", "MQGZ634"]}, {"name": "内パッチン軒継手", "qty": "12", "unit": "個", "section": null, "codes": ["MQG0639", "MQG1639", "MQG5639", "MQG6639", "MQGX639", "MQGZ639"]}, {"name": "止まり（左右一組）", "qty": "4", "unit": "組", "section": null, "codes": ["MQG0635", "MQG1635", "MQG5635", "MQG6635", "MQGX635", "MQGZ635"]}, {"name": "外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQG0431", "MQG1431", "MQG5431", "MQG6431", "MQGX431", "MQGZ431"]}, {"name": "内曲り（90°）", "qty": "2", "unit": "個", "section": null, "codes": ["MQG0430", "MQG1430", "MQG5430", "MQG6430", "MQGX430", "MQGZ430"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "内飾り板横流し（90°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0032", "MQC1032", "MQC5032", "MQC6032", "—", "—"]}, {"name": "投げ板", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0033", "MQC1033", "MQC5033", "MQC6033", "—", "—"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "落葉止め PC50-PGR60×1000", "qty": "10", "unit": "セット", "section": null, "codes": ["MQC9931", "MQC9931", "MQC9931", "MQC9931", "MQC9931", "MQC9931"]}, {"name": "F型集水器 PGR60×PC30-S30-60", "qty": "8", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQG03301J", "MQG13301J", "MQG53301J", "MQG63301J", "—", "—"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCX963", "MQCZ963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}, {"name": "吊具（高強度）正面打出なし11mm固定式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQC99300PB", "MQC99300PB", "MQC99300PB", "MQC99300PB", "MQC99300PB", "MQC99300PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式3寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQC99353PB", "MQC99353PB", "MQC99353PB", "MQC99353PB", "MQC99353PB", "MQC99353PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式4寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQC99354PB", "MQC99354PB", "MQC99354PB", "MQC99354PB", "MQC99354PB", "MQC99354PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQC99355PB", "MQC99355PB", "MQC99355PB", "MQC99355PB", "MQC99355PB", "MQC99355PB"]}, {"name": "マルチカバーI型取付具（ポリカーボネート高強度）", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQC99300PM", "MQC99300PM", "MQC99300PM", "MQC99300PM", "MQC99300PM", "MQC99300PM"]}, {"name": "勾配調整プレート ±0.5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924"]}, {"name": "勾配調整プレート ±1寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934"]}, {"name": "勾配調整プレート ±1.5寸", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944"]}]}, "ファインスケア NF-I型": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "モダンベージュ", "オークブラウン"], "products": [{"name": "軒とい NF-I型×3600", "qty": "4", "unit": "個", "section": null, "codes": ["MQF0180J", "MQF1180J", "MQF5180J", "MQF6180J", "MQFX180J", "MQFZ180J"]}, {"name": "軒継手（外パッチン+内押え）", "qty": "12", "unit": "個", "section": null, "codes": ["MQF0684", "MQF1684", "MQF5684", "MQF6684", "MQFX684", "MQFZ684"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQF0685", "MQF1685", "MQF5685", "MQF6685", "MQFX685", "MQFZ685"]}, {"name": "外曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQF0481", "MQF1481", "MQF5481", "MQF6481", "MQFX481", "MQFZ481"]}, {"name": "内曲り（90°）", "qty": "2", "unit": "個", "section": null, "codes": ["MQF0480", "MQF1480", "MQF5480", "MQF6480", "MQFX480", "MQFZ480"]}, {"name": "軒といストッパー Ⅰ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ69131", "MQ69131", "MQ69131", "MQ69131", "MQ69131", "MQ69131"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "F型集水器 NF-I×PC30-S30×60", "qty": "8", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQF03801", "MQF13801", "MQF53801", "MQF63801", "MQFX3801", "MQFZ3801"]}, {"name": "F型集水器 NF-I×75", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQF0384", "MQF1384", "MQF5384", "MQF6384", "—", "—"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCX963", "MQCZ963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}, {"name": "吊具（高強度）正面打出なし15mm固定式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQF998001PB", "MQF998001PB", "MQF998001PB", "MQF998001PB", "MQF998001PB", "MQF998001PB"]}, {"name": "吊具（高強度）正面打4寸（21°）勾配", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQF99804PS", "MQF99804PS", "MQF99804PS", "MQF99804PS", "MQF99804PS", "MQF99804PS"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式3寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQF99833PB", "MQF99833PB", "MQF99833PB", "MQF99833PB", "MQF99833PB", "MQF99833PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式4寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQF99834PB", "MQF99834PB", "MQF99834PB", "MQF99834PB", "MQF99834PB", "MQF99834PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQF99835PB", "MQF99835PB", "MQF99835PB", "MQF99835PB", "MQF99835PB", "MQF99835PB"]}, {"name": "マルチカバーII型取付具（高強度）", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQF99800PM", "MQF99800PM", "MQF99800PM", "MQF99800PM", "MQF99800PM", "MQF99800PM"]}, {"name": "勾配調整プレート ±0.5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924"]}, {"name": "勾配調整プレート ±1寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934"]}, {"name": "勾配調整プレート ±1.5寸", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944"]}]}, "ジェイスケア PJ70": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "モダンベージュ", "オークブラウン"], "products": [{"name": "軒とい PJ70×3600", "qty": "10", "unit": "個", "section": null, "codes": ["MQJ0130", "MQJ1130", "MQJ5130", "MQJ6130", "MQJX130", "MQJZ130"]}, {"name": "軒継手（外パッチン+内押え）", "qty": "20", "unit": "個", "section": null, "codes": ["MQJ0636", "MQJ1636", "MQJ5636", "MQJ6636", "MQJX636", "MQJZ636"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQJ0635", "MQJ1635", "MQJ5635", "MQJ6635", "MQJX635", "MQJZ635"]}, {"name": "デザイン止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQJ0631", "MQJ1631", "MQJ5631", "MQJ6631", "MQJX631", "MQJZ631"]}, {"name": "外曲り（90°）", "qty": "8", "unit": "個", "section": null, "codes": ["MQJ0431", "MQJ1431", "MQJ5431", "MQJ6431", "MQJX431", "MQJZ431"]}, {"name": "内曲り（90°）", "qty": "6", "unit": "個", "section": null, "codes": ["MQJ0430", "MQJ1430", "MQJ5430", "MQJ6430", "MQJX430", "MQJZ430"]}, {"name": "入隅重ね曲り（90°）", "qty": "6", "unit": "個", "section": null, "codes": ["—", "—", "MQJ5433", "MQJ6433", "—", "—"]}, {"name": "再直曲り（85°）", "qty": "4", "unit": "個", "section": null, "codes": ["—", "—", "MQJ5439", "MQJ6439", "—", "—"]}, {"name": "再直曲り（75°）", "qty": "4", "unit": "個", "section": null, "codes": ["—", "—", "MQJ5438", "MQJ6438", "—", "—"]}, {"name": "内飾り板（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQJ0032", "MQJ1032", "MQJ5032", "MQJ6032", "MQJX032", "MQJZ032"]}, {"name": "投げ板", "qty": "4", "unit": "個", "section": null, "codes": ["MQJ0033", "MQJ1033", "MQJ5033", "MQJ6033", "MQJX033", "MQJZ033"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922", "MQ6922"]}, {"name": "すっきり集水器 PJ70×PC30-S30-60", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQJ03301", "MQJ13301", "MQJ53301", "MQJ63301", "—", "—"]}, {"name": "すっきり集水器 PJ70×60", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQJ0332", "MQJ1332", "MQJ5332", "MQJ6332", "—", "—"]}, {"name": "すっきり集水器 PJ70×75", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQJ0333", "MQJ1333", "MQJ5333", "MQJ6333", "—", "—"]}, {"name": "F型集水器 PJ70×PC30-S30-60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQJ03351", "MQJ13351", "MQJ53351", "MQJ63351", "MQJX3351", "MQJZ3351"]}, {"name": "F型集水器 PJ70×60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQJ0337", "MQJ1337", "MQJ5337", "MQJ6337", "MQJX337", "MQJZ337"]}, {"name": "あじろ集水器 PJ70×75×60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "MQJ5334", "MQJ6334", "—", "—"]}, {"name": "すっきり受けます PC30-S30（落し口）", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "MQJ5381", "MQJ6381", "—", "—"]}, {"name": "すっきり受けます 75×60（落し口）", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "MQJ5382", "MQJ6382", "—", "—"]}, {"name": "すっきり寄せます PC30-S30", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "MQJ5383", "MQJ6383", "—", "—"]}, {"name": "すっきり寄せます 75×60（落し口）", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "MQJ5384", "MQJ6384", "—", "—"]}, {"name": "受けます 75×60（落し口）", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "KQ5846", "KQ6846", "—", "—"]}, {"name": "寄せます 75×60（落し口）", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["—", "—", "KQ5845", "KQ6845", "—", "—"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963", "MQCX963", "MQCZ963"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ1941", "KQ5941", "KQ6941", "—", "—"]}, {"name": "吊具（高強度）正面打出なし11mm固定式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQJ99300PB", "MQJ99300PB", "MQJ99300PB", "MQJ99300PB", "MQJ99300PB", "MQJ99300PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式3寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQJ99353PB", "MQJ99353PB", "MQJ99353PB", "MQJ99353PB", "MQJ99353PB", "MQJ99353PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式4寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQJ99354PB", "MQJ99354PB", "MQJ99354PB", "MQJ99354PB", "MQJ99354PB", "MQJ99354PB"]}, {"name": "吊具（高強度）正面打15〜45mm出スライド式5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQJ99355PB", "MQJ99355PB", "MQJ99355PB", "MQJ99355PB", "MQJ99355PB", "MQJ99355PB"]}, {"name": "マルチカバーI型・II型取付具", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQS9925PM", "MQS9925PM", "MQS9925PM", "MQS9925PM", "MQS9925PM", "MQS9925PM"]}, {"name": "勾配調整プレート ±0.5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924", "MQ9924"]}, {"name": "勾配調整プレート ±1寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934", "MQ9934"]}, {"name": "勾配調整プレート ±1.5寸", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944", "MQ9944"]}, {"name": "吊金具丸足打込み4寸（21°）勾配 正面打10〜45mm出", "qty": "50", "unit": "個", "section": "■ 吊金具・受金具", "codes": ["MQJ993501P", "MQJ993501P", "MQJ993501P", "MQJ993501P", "MQJ993501P", "MQJ993501P"]}, {"name": "吊金具角足打込み4寸（21°）勾配 正面打10〜45mm出", "qty": "50", "unit": "個", "section": "■ 吊金具・受金具", "codes": ["MQJ993511P", "MQJ993511P", "MQJ993511P", "MQJ993511P", "MQJ993511P", "MQJ993511P"]}, {"name": "受金具（ステンレス）丸足打込み h=25〜45mm", "qty": "50", "unit": "個", "section": "■ 吊金具・受金具", "codes": ["—", "—", "MQJ75350S", "MQJ76350S", "—", "—"]}, {"name": "受金具（ステンレス）角足打込み h=25〜45mm", "qty": "50", "unit": "個", "section": "■ 吊金具・受金具", "codes": ["—", "—", "MQJ75351S", "MQJ76351S", "—", "—"]}, {"name": "受金具（ステンレス）丸足鏡首 h=40〜64mm", "qty": "50", "unit": "個", "section": "■ 吊金具・受金具", "codes": ["—", "—", "MQJ75360S", "MQJ76360S", "—", "—"]}, {"name": "受金具（ステンレス）平足鏡首 h=50〜74mm", "qty": "50", "unit": "個", "section": "■ 吊金具・受金具", "codes": ["—", "—", "MQJ75361S", "MQJ76361S", "—", "—"]}]}, "シビルスケア PC77": {"colors": ["ミルクホワイト", "しんちゃ", "ブラック"], "products": [{"name": "軒とい PC77×3600", "qty": "8", "unit": "個", "section": null, "codes": ["MQC0140", "MQC5140T", "MQC6140T"]}, {"name": "軒継手（外パッチン+内押え）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0644", "MQC5644", "MQC6644"]}, {"name": "止まり（左右一組）", "qty": "10", "unit": "組", "section": null, "codes": ["MQC0645", "MQC5645", "MQC6645"]}, {"name": "外曲り（90°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0441", "MQC5441", "MQC6441"]}, {"name": "内曲り（90°）", "qty": "4", "unit": "個", "section": null, "codes": ["MQC0440", "MQC5440", "MQC6440"]}, {"name": "軒といストッパー Ⅱ型", "qty": "20", "unit": "個", "section": null, "codes": ["MQ6933", "MQ6933", "MQ6933"]}, {"name": "落葉よけネット φ85×2700", "qty": "36", "unit": "個", "section": null, "codes": ["MQ6922", "MQ6922", "MQ6922"]}, {"name": "落葉止め PC77×1000", "qty": "10", "unit": "セット", "section": null, "codes": ["MQC9941", "MQC9941", "MQC9941"]}, {"name": "集水器 PC77×PC30-S30", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0346", "MQC5346", "MQC6346"]}, {"name": "集水器 PC77×60", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0344", "MQC5344", "MQC6344"]}, {"name": "集水器 PC77×75×60", "qty": "4", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0343", "MQC5343", "MQC6343"]}, {"name": "自在ドレン PC30-S30（大）", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0962", "MQC5962", "MQC6962"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0963", "MQC5963", "MQC6963"]}, {"name": "自在ドレン φ60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0941", "MQC5941", "MQC6941"]}, {"name": "自在ドレン 75×60", "qty": "10", "unit": "個", "section": "■ 落とし口部材", "codes": ["MQC0943", "MQC5943", "MQC6943"]}, {"name": "自在ドレン 60（小）", "qty": "20", "unit": "個", "section": "■ 落とし口部材", "codes": ["KQ0941", "KQ5941", "KQ6941"]}, {"name": "吊具（高強度）正面打出なし10mm固定式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQC9944P", "MQC9944P", "MQC9944P"]}, {"name": "吊具（高強度）正面打15〜45mm出4寸（21°）スライド式", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQC9945P", "MQC9945P", "MQC9945P"]}, {"name": "吊具（高強度）正面打10〜45mm出スライド式3〜5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQC99413P", "MQC99413P", "MQC99413P"]}, {"name": "勾配調整プレート ±0.5寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9924", "MQ9924", "MQ9924"]}, {"name": "勾配調整プレート ±1寸", "qty": "50", "unit": "個", "section": "■ 吊具", "codes": ["MQ9934", "MQ9934", "MQ9934"]}, {"name": "勾配調整プレート ±1.5寸", "qty": "30", "unit": "個", "section": "■ 吊具", "codes": ["MQ9944", "MQ9944", "MQ9944"]}]}, "たてとい PC30": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック"], "products": [{"name": "たてとい PC30×2700", "qty": "20", "unit": "個", "section": null, "codes": ["MQC0261", "MQC1261", "MQC5261", "MQC6261"]}, {"name": "自在ドレン PC30-S30（大）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0962", "MQC1962", "MQC5962", "MQC6962"]}, {"name": "自在ドレン PC30-S30（小）", "qty": "20", "unit": "個", "section": null, "codes": ["MQC0963", "MQC1963", "MQC5963", "MQC6963"]}, {"name": "エルボ（92°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC05631", "MQC15631", "MQC55631", "MQC65631"]}, {"name": "エルボ（105°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC05621", "MQC15621", "MQC55621", "MQC65621"]}, {"name": "エルボ（145°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC05651", "MQC15651", "MQC55651", "MQC65651"]}, {"name": "横エルボ", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0564", "MQC1564", "MQC5564", "MQC6564"]}, {"name": "横エルボ（105°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0566", "MQC1566", "MQC5566", "MQC6566"]}, {"name": "スライドエルボ（100°〜135°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC05671", "MQC15671", "MQC55671", "MQC65671"]}, {"name": "くるくる継手（92°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC08671", "MQC18671", "MQC58671", "MQC68671"]}, {"name": "角九エルボ（90°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0596", "MQC1596", "MQC5596", "MQC6596"]}, {"name": "はしごい用一般地用水下エルボ（90°）L=80〜110", "qty": "10", "unit": "個", "section": null, "codes": ["MQC09661", "MQC19661", "MQC59661", "MQC69661"]}, {"name": "はしごい用積雪地用水下エルボ（90°）L=180〜210", "qty": "10", "unit": "個", "section": null, "codes": ["MQC09681", "MQC19681", "MQC59681", "MQC69681"]}, {"name": "たて継手（内締め方式）", "qty": "20", "unit": "個", "section": null, "codes": ["MQC08601", "MQC18601", "MQC58601", "MQC68601"]}, {"name": "伸縮たて継手", "qty": "4", "unit": "個", "section": null, "codes": ["MQC0864", "MQC1864", "MQC5864", "MQC6864"]}, {"name": "角九継手（92°）", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0861", "MQC1861", "MQC5861", "MQC6861"]}, {"name": "P型集水器 たてとい直結", "qty": "20", "unit": "個", "section": null, "codes": ["MQC0868", "MQC1868", "MQC5868", "MQC6868"]}, {"name": "飾りますマルチ（兼L1）", "qty": "4", "unit": "個", "section": null, "codes": ["MQC0315", "MQC1315", "MQC5315", "MQC6315"]}, {"name": "角排水管カバー PC30×S30 排水管VU50・VP/VU65/75", "qty": "10", "unit": "個", "section": null, "codes": ["MQC06601", "MQC16601", "MQC56601", "MQC66601"]}, {"name": "軒天ソケット PC30", "qty": "10", "unit": "個", "section": null, "codes": ["MQC0914", "MQC1914", "MQC5914", "MQC6914"]}, {"name": "逆流防止継手 PC30-S30", "qty": "4", "unit": "個", "section": null, "codes": ["MQC0386G", "MQC1386", "MQC5386", "MQC6386"]}, {"name": "パッチン控 打込み（L=80）", "qty": "30", "unit": "個", "section": "■ 控金具", "codes": ["MQC07061S", "MQC17061S", "MQC57061S", "MQC67061S"]}, {"name": "パッチン控 打込み鉄骨用（L=50）", "qty": "30", "unit": "個", "section": "■ 控金具", "codes": ["MQC070631S", "MQC170631S", "MQC570631S", "MQC670631S"]}, {"name": "パッチン控 プラスチック（L=40）", "qty": "30", "unit": "個", "section": "■ 控金具", "codes": ["MQC07611", "MQC17611", "MQC57611", "MQC67611"]}]}, "メタリック調たてとい KQM60": {"colors": ["ステンシルバー"], "products": [{"name": "たてとい KQM60×2700", "qty": "20", "unit": "個", "section": null, "codes": ["KQMS241"]}, {"name": "自在ドレン φ70 エルボカン合", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS941"]}, {"name": "エルボ（92°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS542"]}, {"name": "エルボ（145°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS545"]}, {"name": "スライドエルボ（100°〜135°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS547"]}, {"name": "たて継手", "qty": "20", "unit": "個", "section": null, "codes": ["KQMS842"]}, {"name": "伸縮たて継手", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS844"]}, {"name": "P型集水器 たてとい直結", "qty": "8", "unit": "個", "section": null, "codes": ["KQMS848"]}, {"name": "排水ます たてとい直結（93°）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS947"]}, {"name": "化粧ます たてとい直結", "qty": "8", "unit": "個", "section": null, "codes": ["KQMS945"]}, {"name": "軒天ソケット エルボカン合", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS942"]}, {"name": "逆流防止 たてとい直結", "qty": "4", "unit": "個", "section": null, "codes": ["KQMS346"]}, {"name": "排水管カバー KQM60（0〜21排水管）", "qty": "10", "unit": "個", "section": null, "codes": ["KQMS648"]}, {"name": "切断治具 60", "qty": "4", "unit": "個", "section": null, "codes": ["KQ694Z"]}, {"name": "パッチン控 打込み（ステンレス）", "qty": "50", "unit": "個", "section": null, "codes": ["KQ8S48S"]}]}, "共用部材": {"colors": ["ミルクホワイト", "パールグレー", "しんちゃ", "ブラック", "オークグレー", "モダンベージュ", "オークブラウン"], "products": [{"name": "オーバーフロー管カバー YP25", "qty": "6", "unit": "個", "section": null, "codes": ["MQ0617", "MQ1617", "MQ5617", "MQ6617", "MQD617", "MQKX617", "MQKZ617"]}, {"name": "接着剤（金属雨とい用）KZ8810 100g", "qty": "20", "unit": "缶", "section": null, "codes": ["KZ8810", "KZ8810", "KZ8810", "KZ8810", "KZ8810", "KZ8810", "KZ8810"]}]}, "ユニシェイプ UST140": {"colors": ["クロ", "シンチャ", "ホワイト", "スレートグレー", "アーバングレー", "メタリックグレー", "シルバーメタリック", "トーメイ"], "products": [{"name": "のきとい UST140-3,600", "qty": "4", "unit": "個", "section": "■ 本体", "codes": ["CH01", "CH01", "CH01", "CH01", "CH01", "—", "CH01", "—"]}, {"name": "のきとい UST140-4,000", "qty": "4", "unit": "個", "section": "■ 本体", "codes": ["CH02", "CH02", "CH02", "CH02", "CH02", "—", "CH02", "—"]}, {"name": "洋風じょうご", "qty": "8", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK01", "PK01", "PK01", "PK01", "PK01", "—", "—", "PK01"]}, {"name": "洋風じょうご（高排水用）", "qty": "8", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK02", "PK02", "PK02", "PK02", "PK02", "★PK02", "PK02", "—"]}, {"name": "落し口エルボ Y60H-85°", "qty": "12", "unit": "個", "section": "■ 軒系列部品", "codes": ["PG02", "PG02", "PG02", "PG02", "PG02", "—", "—", "—"]}, {"name": "落しロリング URT60", "qty": "8", "unit": "個", "section": "■ 軒系列部品", "codes": ["PH19", "PH19", "PH19", "PH19", "PH19", "★PH19", "PH19", "—"]}, {"name": "落しロリング（高排水用）UST42", "qty": "12", "unit": "個", "section": "■ 軒系列部品", "codes": ["PH44", "PH44", "PH44", "PH44", "PH44", "★PH44", "PH44", "—"]}, {"name": "落しロリング Y60H（高排水専用）", "qty": "12", "unit": "個", "section": "■ 軒系列部品", "codes": ["PF96", "PF96", "PF96", "PF96", "—", "—", "—", "—"]}, {"name": "回転リング URT60", "qty": "12", "unit": "個", "section": "■ 軒系列部品", "codes": ["PH01", "PH01", "PH01", "PH01", "PH01", "—", "PH01", "—"]}, {"name": "回転リング Y60H-UT60", "qty": "12", "unit": "個", "section": "■ 軒系列部品", "codes": ["PG03", "PG03", "PG03", "PG03", "PG03", "—", "—", "—"]}, {"name": "回転リング UT60", "qty": "12", "unit": "個", "section": "■ 軒系列部品", "codes": ["PG10", "PG10", "PG10", "PG10", "PG10", "—", "PG10", "—"]}, {"name": "回転リング VU-VP75", "qty": "8", "unit": "個", "section": "■ 軒系列部品", "codes": ["PG15Y", "PG15Y", "PG15Y", "PG15Y", "—", "—", "—", "—"]}, {"name": "インサイドジョイント UST140", "qty": "16", "unit": "個", "section": "■ 軒系列部品", "codes": ["GU65", "GU65", "GU65", "GU65", "GU65", "★GU65", "—", "—"]}, {"name": "ジョイント UST140", "qty": "16", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK14", "PK14", "PK14", "PK14", "PK14", "—", "PK14", "—"]}, {"name": "伸縮ジョイント UST140", "qty": "5", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK04", "PK04", "PK04", "PK04", "PK04", "★PK04", "PK04", "—"]}, {"name": "インサイド曲り（出）UST140", "qty": "8", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK05", "PK05", "PK05", "PK05", "PK05", "★PK05", "—", "—"]}, {"name": "曲り（出）UST140", "qty": "8", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK13", "PK13", "PK13", "PK13", "PK13", "—", "PK13", "—"]}, {"name": "曲り（入）UST140", "qty": "2", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK06", "PK06", "PK06", "PK06", "PK06", "★PK06", "—", "—"]}, {"name": "止り（右・左）UST140", "qty": "14", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK07", "PK07", "PK07", "PK07", "PK07", "—", "PK07", "—"]}, {"name": "止り（右）UST140", "qty": "14", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK11", "—", "—", "—", "—", "★PK11", "—", "—"]}, {"name": "止り（左）UST140", "qty": "14", "unit": "個", "section": "■ 軒系列部品", "codes": ["PK12", "—", "—", "—", "—", "★PK12", "—", "—"]}, {"name": "のきとい切断治具 UST140", "qty": "2", "unit": "個", "section": "■ 軒系列部品", "codes": ["GU66", "GU66", "GU66", "GU66", "GU66", "—", "—", "—"]}, {"name": "ブラケット正面打（吊）固定式 UST140-0-10", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LP01", "—", "—", "—", "—", "—", "LP01", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-0-10〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS01", "—", "—", "—", "—", "—", "LS01", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-2.5-10〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS25", "—", "—", "—", "—", "—", "LS25", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-4-10〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS04", "—", "—", "—", "—", "—", "LS04", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-4.5-10〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS45", "—", "—", "—", "—", "—", "LS45", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-5-10〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS05", "—", "—", "—", "—", "—", "LS05", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-6-10〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS06", "—", "—", "—", "—", "—", "LS06", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-1.0-15〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS12", "—", "—", "—", "—", "—", "LS12", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-1.5-15〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS15", "—", "—", "—", "—", "—", "LS15", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-2-15〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS20", "—", "—", "—", "—", "—", "LS20", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-3-15〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS30", "—", "—", "—", "—", "—", "LS30", "—"]}, {"name": "ブラケット正面打（吊）自在式 UST140-3.5-15〜45", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS35", "—", "—", "—", "—", "—", "LS35", "—"]}, {"name": "ブラケット用金具（特注）上記以外の特殊勾配", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["LS99", "—", "—", "—", "—", "—", "LS99", "—"]}]}, "ユニシェイプ UST42": {"colors": ["クロ", "シンチャ", "ホワイト", "スレートグレー", "アーバングレー", "メタリックグレー", "シルバーメタリック"], "products": [{"name": "たてとい UST42-3,000", "qty": "20", "unit": "個", "section": "■ 本体", "codes": ["BH11", "BH11", "BH11", "BH11", "BH11", "★BH11", "BH11"]}, {"name": "自在ドレン UST42", "qty": "15", "unit": "個", "section": "■ たて系列部品", "codes": ["PH96", "PH96", "PH96", "PH96", "PH96", "★PH96", "PH96"]}, {"name": "落しロリング UST42", "qty": "12", "unit": "個", "section": "■ たて系列部品", "codes": ["PH44", "PH44", "PH44", "PH44", "PH44", "★PH44", "PH44"]}, {"name": "インサイドエルボ UST42-87°", "qty": "30", "unit": "個", "section": "■ たて系列部品", "codes": ["PH33", "PH33", "PH33", "PH33", "PH33", "★PH33", "PH33"]}, {"name": "角々エルボ UST42-87°（大）", "qty": "30", "unit": "個", "section": "■ たて系列部品", "codes": ["PH31", "PH31", "PH31", "PH31", "PH31", "★PH31", "PH31"]}, {"name": "角々エルボ UST42-25°", "qty": "30", "unit": "個", "section": "■ たて系列部品", "codes": ["PH32", "PH32", "PH32", "PH32", "PH32", "★PH32", "PH32"]}, {"name": "ターンエルボ UST42-87°", "qty": "30", "unit": "個", "section": "■ たて系列部品", "codes": ["PH36", "PH36", "PH36", "PH36", "PH36", "★PH36", "PH36"]}, {"name": "はいとい エルボ UST42-90°", "qty": "20", "unit": "個", "section": "■ たて系列部品", "codes": ["PH40", "PH40", "PH40", "PH40", "PH40", "★PH40", "PH40"]}, {"name": "自在エルボ UST42", "qty": "20", "unit": "個", "section": "■ たて系列部品", "codes": ["PH38", "PH38", "PH38", "PH38", "PH38", "★PH38", "PH38"]}, {"name": "はいとい用落し口 S-R60-L100", "qty": "20", "unit": "個", "section": "■ たて系列部品", "codes": ["PF97", "PF97", "PF97", "PF97", "—", "—", "—"]}, {"name": "はいとい用落し口 S-R60-L180", "qty": "20", "unit": "個", "section": "■ たて系列部品", "codes": ["PF98", "PF98", "PF98", "PF98", "—", "—", "—"]}, {"name": "インサイドソケット UST42", "qty": "30", "unit": "個", "section": "■ たて系列部品", "codes": ["PH35", "PH35", "PH35", "PH35", "PH35", "★PH35", "PH35"]}, {"name": "角々ソケット UST42", "qty": "30", "unit": "個", "section": "■ たて系列部品", "codes": ["PH34", "PH34", "PH34", "PH34", "PH34", "★PH34", "PH34"]}, {"name": "ターンソケット UST42", "qty": "20", "unit": "個", "section": "■ たて系列部品", "codes": ["PH37", "PH37", "PH37", "PH37", "PH37", "★PH37", "PH37"]}, {"name": "異径丸角ソケット URT60-UST42", "qty": "20", "unit": "個", "section": "■ たて系列部品", "codes": ["PH42", "PH42", "PH42", "PH42", "PH42", "★PH42", "PH42"]}, {"name": "ネジツキポーチドレンセット URT60", "qty": "20", "unit": "個", "section": "■ たて系列部品", "codes": ["PH07", "PH07", "PH07", "PH07", "PH07", "★PH07", "PH07"]}, {"name": "ポーチドレン UST42", "qty": "12", "unit": "個", "section": "■ たて系列部品", "codes": ["PH56", "PH56", "PH56", "PH56", "PH56", "★PH56", "PH56"]}, {"name": "合せマス UST42", "qty": "20", "unit": "個", "section": "■ たて系列部品", "codes": ["PH41", "PH41", "PH41", "PH41", "PH41", "★PH41", "PH41"]}, {"name": "Y管 UST42-VU50-87°", "qty": "10", "unit": "個", "section": "■ たて系列部品", "codes": ["PH39", "PH39", "PH39", "PH39", "PH39", "★PH39", "PH39"]}, {"name": "排水管カバー UST42-VU・VP50対応", "qty": "15", "unit": "個", "section": "■ たて系列部品", "codes": ["PH95", "PH95", "PH95", "PH95", "PH95", "—", "PH95"]}, {"name": "排水管カバー UST42-VU・VP75・VP65・VU50対応", "qty": "10", "unit": "個", "section": "■ たて系列部品", "codes": ["PH43", "PH43", "PH43", "PH43", "PH43", "★PH43", "PH43"]}, {"name": "たてとい切断治具 UST42", "qty": "10", "unit": "個", "section": "■ たて系列部品", "codes": ["GU68", "GU68", "GU68", "GU68", "GU68", "—", "—"]}, {"name": "ブラケットデンデン UST42-打込L90", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["PH45", "PH45", "PH45", "PH45", "PH45", "—", "PH45"]}, {"name": "ブラケットデンデン UST42-打込L105", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["PH46", "PH46", "PH46", "PH46", "PH46", "★PH46", "PH46"]}, {"name": "ブラケットデンデン UST42-打込L120", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["PH47", "PH47", "PH47", "PH47", "PH47", "—", "PH47"]}, {"name": "ブラケットデンデン UST42-L24", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["PH71", "PH71", "PH71", "PH71", "PH71", "—", "PH71"]}, {"name": "ブラケットデンデン UST42-L49", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["PH48", "PH48", "PH48", "PH48", "PH48", "★PH48", "PH48"]}, {"name": "はいといデンデン UST42（屋根材厚23mm相当）薄板・カラーベスト・釉薬葺き等", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["PH51", "PH51", "PH51", "PH51", "PH51", "★PH51", "PH51"]}, {"name": "はいといデンデン UST42（屋根材厚23mm相当）平瓦・ブルック・和瓦等", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["PH50", "PH50", "PH50", "PH50", "PH50", "★PH50", "PH50"]}, {"name": "はいといデンデン UST42（屋根材厚23mm相当）和瓦・モニエル瓦等", "qty": "50", "unit": "個", "section": "■ ブラケット", "codes": ["PH49", "PH49", "PH49", "PH49", "PH49", "★PH49", "PH49"]}]}};
+
+const LS = {
+  get: (k, def) => { try{ return JSON.parse(localStorage.getItem(k)) ?? def; }catch{return def;} },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+};
+
+// 数量ステッパー（iPhoneでも＋／−ボタンで数量変更）
+function qtyStep(btn, delta){
+  const wrap = btn.closest('.qty-stepper');
+  if(!wrap) return;
+  const input = wrap.querySelector('input[type="number"]');
+  if(!input) return;
+  const minAttr = input.getAttribute('min');
+  const maxAttr = input.getAttribute('max');
+  const min = (minAttr!==null && minAttr!=='') ? parseFloat(minAttr) : -Infinity;
+  const max = (maxAttr!==null && maxAttr!=='') ? parseFloat(maxAttr) : Infinity;
+  const cur = parseFloat(input.value);
+  const base = isNaN(cur) ? (min===-Infinity?0:min) : cur;
+  let next = base + delta;
+  if(next < min) next = min;
+  if(next > max) next = max;
+  input.value = next;
+  input.dispatchEvent(new Event('input', {bubbles:true}));
+  input.dispatchEvent(new Event('change', {bubbles:true}));
+  // ロングプレスのリピート用
+  return next;
+}
+// ロングプレスで連続増減
+let _qtyHoldTimer = null, _qtyHoldInterval = null;
+function qtyHoldStart(btn, delta){
+  qtyStep(btn, delta);
+  _qtyHoldTimer = setTimeout(function(){
+    _qtyHoldInterval = setInterval(function(){ qtyStep(btn, delta); }, 80);
+  }, 400);
+}
+function qtyHoldEnd(){
+  if(_qtyHoldTimer){ clearTimeout(_qtyHoldTimer); _qtyHoldTimer=null; }
+  if(_qtyHoldInterval){ clearInterval(_qtyHoldInterval); _qtyHoldInterval=null; }
+}
+
+let currentTab = 'home';
+let currentHiroiId = null;
+let GAS_URL = localStorage.getItem('inv_gas_url') || '';
+
+function getEffectiveProductData() {
+  const override = LS.get('inv_master_override', null);
+  if (override && Object.keys(override).length > 0) return override;
+  return PRODUCT_DATA;
+}
+
+function getInventory(code) {
+  if (!code || code === '—' || code === '特注') return 0;
+  const pqty = LS.get('inv_pqty', {});
+  const txs = LS.get('inv_tx', []);
+  const init = Number(pqty[code] || 0);
+  const inbound = txs.filter(t => t.code === code && t.type === '入庫').reduce((s,t) => s+Number(t.qty), 0);
+  const outbound = txs.filter(t => t.code === code && t.type === '出庫').reduce((s,t) => s+Number(t.qty), 0);
+  return init + inbound - outbound;
+}
+
+function gasPost(payload) {
+  if (!GAS_URL) return;
+  fetch(GAS_URL, {method:'POST', mode:'no-cors', body:JSON.stringify(payload)}).catch(()=>{});
+}
+
+function gasGet(callback) {
+  if (!GAS_URL) { callback(null); return; }
+  const cbName = 'gasCallback_' + Date.now();
+  let done = false;
+  const timer = setTimeout(() => {
+    if (!done) { done=true; delete window[cbName]; document.getElementById('gas-script')?.remove(); callback(null); }
+  }, 10000);
+  window[cbName] = (data) => {
+    if (done) return; done=true; clearTimeout(timer);
+    delete window[cbName]; document.getElementById('gas-script')?.remove();
+    callback(data);
+  };
+  const old = document.getElementById('gas-script'); if(old) old.remove();
+  const s = document.createElement('script');
+  s.id = 'gas-script';
+  s.onerror = () => { if(!done){done=true;clearTimeout(timer);delete window[cbName];callback(null);} };
+  s.src = GAS_URL + '?callback=' + cbName + '&t=' + Date.now();
+  document.body.appendChild(s);
+}
+
+function saveGasUrl() {
+  GAS_URL = document.getElementById('gas-url-input').value.trim();
+  localStorage.setItem('inv_gas_url', GAS_URL);
+  updateConnStatus();
+  document.getElementById('gas-test-result').textContent = 'URLを保存しました';
+  if (autoSyncEnabled && GAS_URL) startAutoSync();
+  updateAutoSyncStatus();
+}
+
+function disconnectGas() {
+  GAS_URL = '';
+  localStorage.removeItem('inv_gas_url');
+  document.getElementById('gas-url-input').value = '';
+  updateConnStatus();
+}
+
+function testGasConnection() {
+  const el = document.getElementById('gas-test-result');
+  el.textContent = '接続テスト中...';
+  el.style.color='#888';
+  gasGet((data) => {
+    if (data) {
+      const keys = Object.keys(data);
+      const hasPqty = ['productQty','product_qty','inventory','stock','stocks'].some(k=>data[k]);
+      el.innerHTML = '✅ 接続成功<br><span style="font-size:11px;">受信キー: [' + keys.join(', ') + ']'
+        + (hasPqty ? '' : '<br>⚠️ 在庫数キー(productQty等)が見つかりません')
+        + '</span>';
+      el.style.color='#2e7d32';
+    } else {
+      el.innerHTML = '❌ 接続失敗<br><span style="font-size:11px;">URLを確認、またはGASのdoGet()でJSONPレスポンスを返しているか確認してください。</span>';
+      el.style.color='#c62828';
+    }
+  });
+}
+
+function updateConnStatus() {
+  const dot = document.getElementById('connDot');
+  const lbl = document.getElementById('connLabel');
+  if (GAS_URL) { dot.className='conn-dot on'; lbl.textContent='接続済'; }
+  else { dot.className='conn-dot off'; lbl.textContent='未接続'; }
+}
+
+function syncAllToSheets() {
+  const el = document.getElementById('sync-result');
+  el.textContent = '送信中...';
+  gasPost({
+    action:'syncAll',
+    transactions: LS.get('inv_tx',[]),
+    parts: LS.get('inv_parts',[]),
+    productQty: LS.get('inv_pqty',{}),
+  });
+  setTimeout(()=>{ el.textContent = '✅ 送信完了'; }, 800);
+}
+
+function loadFromSheets() {
+  const el = document.getElementById('sync-result');
+  el.innerHTML = '⏳ 読み込み中...';
+  gasGet((data) => {
+    if (!data) {
+      el.innerHTML = '❌ 読み込み失敗<br><span style="font-size:11px;">GAS URLを確認してください。GAS側でdoGet()がJSON/JSONPを返しているか確認してください。</span>';
+      el.style.color='#c62828';
+      return;
+    }
+    const txKey = ['transactions','transaction','inv_tx','txs'].find(k=>data[k]);
+    const pqtyKey = ['productQty','product_qty','productqty','inventory','inv_pqty','stock','stocks'].find(k=>data[k]);
+    const partsKey = ['parts','part','inv_parts'].find(k=>data[k]);
+    let updated = [];
+
+    if (txKey) {
+      const gasTxs = data[txKey].filter(t=>t.date&&t.qty>0).map(t=>Object.assign({},t,{qty:Number(t.qty)}));
+      const localTxs = LS.get('inv_tx',[]);
+      // GASとローカルをIDでマージ（どちらかにしかないものを合わせる）
+      const allIds = new Set([...gasTxs.map(t=>t.id), ...localTxs.map(t=>t.id)]);
+      const gasMap = Object.fromEntries(gasTxs.map(t=>[t.id,t]));
+      const localMap = Object.fromEntries(localTxs.map(t=>[t.id,t]));
+      const merged = [...allIds].map(id=>gasMap[id]||localMap[id]).filter(t=>t&&t.date&&t.qty>0);
+      LS.set('inv_tx', merged);
+      updated.push('入出庫:'+merged.length+'件');
+    }
+    if (partsKey) { LS.set('inv_parts', data[partsKey]); updated.push('部品:'+data[partsKey].length+'件'); }
+    if (pqtyKey) { LS.set('inv_pqty', data[pqtyKey]); updated.push('在庫数:'+Object.keys(data[pqtyKey]).length+'品目'); }
+
+    if (updated.length === 0) {
+      el.innerHTML = '⚠️ データなし<br><span style="font-size:11px;">受信データ: ' + JSON.stringify(Object.keys(data)) + '</span>';
+      el.style.color='#e65100';
+    } else {
+      el.innerHTML = '✅ 読み込み完了: ' + updated.join(' / ');
+      el.style.color='#2e7d32';
+      renderAll();
+    }
+  });
+}
+
+
+// ===== 商品マスタ管理 =====
+function exportMasterToSheets() {
+  const el = document.getElementById('master-sync-result');
+  if (!GAS_URL) { el.textContent = '❌ GASに接続してください'; el.style.color='#c62828'; return; }
+  el.textContent = '⏳ 書き出し中...'; el.style.color='#888';
+
+  // PRODUCT_DATAを行データに変換
+  const rows = [];
+  // ヘッダー行：全シリーズの最大色数を取得
+  let maxColors = 0;
+  Object.values(PRODUCT_DATA).forEach(d => { if(d.colors.length > maxColors) maxColors = d.colors.length; });
+
+  Object.entries(PRODUCT_DATA).forEach(([seriesName, seriesData]) => {
+    seriesData.products.forEach(p => {
+      const row = [seriesName, p.name, p.section||'', p.qty||'', p.unit||'個'];
+      // 色ごとの品番
+      seriesData.colors.forEach((color, ci) => {
+        row.push(seriesData.colors[ci]); // 色名は不要だが構造上必要
+      });
+      rows.push({
+        series: seriesName,
+        colors: seriesData.colors,
+        name: p.name,
+        section: p.section||'',
+        qty: p.qty||'',
+        unit: p.unit||'個',
+        codes: p.codes
+      });
+    });
+  });
+
+  gasPost({
+    action: 'exportMaster',
+    masterData: Object.entries(PRODUCT_DATA).map(([seriesName, seriesData]) => ({
+      seriesName,
+      colors: seriesData.colors,
+      products: seriesData.products.map(p => ({
+        name: p.name,
+        section: p.section||'',
+        qty: p.qty||'',
+        unit: p.unit||'個',
+        codes: p.codes
+      }))
+    }))
+  });
+
+  setTimeout(() => {
+    el.textContent = '✅ 書き出し完了！スプレッドシートの「商品マスタ」シートを確認してください';
+    el.style.color = '#2e7d32';
+  }, 1500);
+}
+
+function importMasterFromSheets() {
+  const el = document.getElementById('master-sync-result');
+  if (!GAS_URL) { el.textContent = '❌ GASに接続してください'; el.style.color='#c62828'; return; }
+  el.textContent = '⏳ 読み込み中...'; el.style.color='#888';
+
+  gasGet((data) => {
+    if (!data) { el.textContent = '❌ 読み込み失敗'; el.style.color='#c62828'; return; }
+    if (!data.masterData || Object.keys(data.masterData).length === 0) {
+      el.textContent = '⚠️ スプレッドシートに商品マスタがありません。先に「書き出す」を実行してください';
+      el.style.color = '#e65100';
+      return;
+    }
+    // PRODUCT_DATAを上書き（ローカルに保存）
+    LS.set('inv_master_override', data.masterData);
+    el.textContent = `✅ ${Object.keys(data.masterData).length}シリーズを読み込みました。アプリを再読み込みしてください`;
+    el.style.color = '#2e7d32';
+    // タブを更新
+    renderMasterSelects();
+    renderSummarySelects();
+  });
+}
+
+// ===== 自動同期 =====
+let autoSyncTimer = null;
+let autoSyncEnabled = localStorage.getItem('auto_sync_enabled') === '1';
+let autoSyncInterval = parseInt(localStorage.getItem('auto_sync_interval') || '60');
+let lastSyncTime = null;
+
+function toggleAutoSync() {
+  autoSyncEnabled = document.getElementById('auto-sync-toggle').checked;
+  localStorage.setItem('auto_sync_enabled', autoSyncEnabled ? '1' : '0');
+  if (autoSyncEnabled) {
+    startAutoSync();
+  } else {
+    stopAutoSync();
+  }
+  updateAutoSyncStatus();
+}
+
+function updateAutoSyncInterval() {
+  autoSyncInterval = parseInt(document.getElementById('auto-sync-interval').value);
+  localStorage.setItem('auto_sync_interval', autoSyncInterval);
+  if (autoSyncEnabled) {
+    stopAutoSync();
+    startAutoSync();
+  }
+  updateAutoSyncStatus();
+}
+
+function startAutoSync() {
+  stopAutoSync();
+  if (!GAS_URL || !autoSyncEnabled) return;
+  autoSyncFromSheets();
+  autoSyncTimer = setInterval(autoSyncFromSheets, autoSyncInterval * 1000);
+  updateAutoSyncStatus();
+}
+
+function stopAutoSync() {
+  if (autoSyncTimer) { clearInterval(autoSyncTimer); autoSyncTimer = null; }
+}
+
+function autoSyncFromSheets() {
+  if (!GAS_URL) return;
+  const indicator = document.getElementById('sync-indicator');
+  if (indicator) indicator.style.display = 'inline';
+
+  // まず自分のデータをGASに送信してから読み込む（送信→取得の順序）
+  gasPost({
+    action:'syncAll',
+    transactions: LS.get('inv_tx',[]),
+    parts: LS.get('inv_parts',[]),
+    productQty: LS.get('inv_pqty',{}),
+  });
+
+  // 少し待ってからGASのデータを取得（GASが処理するまで待つ）
+  setTimeout(() => {
+    gasGet((data) => {
+      if (indicator) indicator.style.display = 'none';
+      if (!data) return;
+
+      const txKey = ['transactions','transaction','inv_tx','txs'].find(k=>data[k]);
+      const pqtyKey = ['productQty','product_qty','productqty','inventory','inv_pqty','stock','stocks'].find(k=>data[k]);
+      const partsKey = ['parts','part','inv_parts'].find(k=>data[k]);
+      let changed = false;
+
+      // 入出庫記録：GASのデータ件数がローカルより多い場合のみ上書き（他の端末の追加分をマージ）
+      if (txKey) {
+        const gasTxs = data[txKey].map(t=>Object.assign({},t,{qty:Number(t.qty)}));
+        const localTxs = LS.get('inv_tx',[]);
+        // GASにあってローカルにないIDを追加（マージ）
+        const localIds = new Set(localTxs.map(t=>t.id));
+        const newFromGas = gasTxs.filter(t=>t.id && !localIds.has(t.id) && t.date && t.qty > 0);
+        if (newFromGas.length > 0) {
+          const merged = [...localTxs, ...newFromGas];
+          LS.set('inv_tx', merged);
+          changed = true;
+        }
+      }
+
+      // 在庫数：GASのデータをベースに（初期在庫）
+      if (pqtyKey) {
+        const newQ = JSON.stringify(data[pqtyKey]);
+        const oldQ = JSON.stringify(LS.get('inv_pqty',{}));
+        if (newQ !== oldQ) { LS.set('inv_pqty', data[pqtyKey]); changed=true; }
+      }
+
+      // 部品：GASのデータをベースに
+      if (partsKey) {
+        const newP = JSON.stringify(data[partsKey]);
+        const oldP = JSON.stringify(LS.get('inv_parts',[]));
+        if (newP !== oldP) { LS.set('inv_parts', data[partsKey]); changed=true; }
+      }
+
+      lastSyncTime = new Date();
+      if (changed) {
+        renderAll();
+        const el = document.getElementById('auto-sync-status');
+        if (el) { el.textContent = '🔄 ' + lastSyncTime.toLocaleTimeString('ja-JP') + ' 他の端末のデータを取得しました'; el.style.color='#2e7d32'; }
+      }
+      updateAutoSyncStatus();
+    });
+  }, 3000);
+}
+
+function updateAutoSyncStatus() {
+  const toggle = document.getElementById('auto-sync-toggle');
+  const intervalSel = document.getElementById('auto-sync-interval');
+  const statusEl = document.getElementById('auto-sync-status');
+  if (!toggle) return;
+  toggle.checked = autoSyncEnabled;
+  if (intervalSel) intervalSel.value = String(autoSyncInterval);
+  if (statusEl) {
+    if (!autoSyncEnabled) {
+      statusEl.textContent = '自動同期はオフです';
+      statusEl.style.color = '#888';
+    } else if (!GAS_URL) {
+      statusEl.textContent = '⚠️ GASに接続してから有効にしてください';
+      statusEl.style.color = '#e65100';
+    } else {
+      const timeStr = lastSyncTime ? lastSyncTime.toLocaleTimeString('ja-JP') : '未実行';
+      statusEl.textContent = `✅ ${autoSyncInterval}秒ごとに同期中（最終: ${timeStr}）`;
+      statusEl.style.color = '#2e7d32';
+    }
+  }
+}
+
+function clearAllData() {
+  if (!confirm('全データをリセットしますか？')) return;
+  ['inv_tx','inv_parts','inv_pqty','inv_hiroi'].forEach(k=>localStorage.removeItem(k));
+  renderAll();
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  const tabs = ['home','hiroi','tx','summary','settings'];
+  document.querySelectorAll('.tabbar button').forEach((b,i)=>b.classList.toggle('active', tabs[i]===tab));
+  if(tab==='home') renderHome();
+  if(tab==='hiroi') renderHiroiList();
+  if(tab==='tx') renderTx();
+  if(tab==='summary') { renderSummarySelects(); renderSummary(); }
+  if(tab==='settings') {
+    document.getElementById('gas-url-input').value = GAS_URL;
+    updateAutoSyncStatus();
+  }
+}
+
+// HOME
+function renderHome() {
+  let totalCodes = 0;
+  Object.values(getEffectiveProductData()).forEach(d=>d.products.forEach(p=>totalCodes+=p.codes.filter(c=>c&&c!=='—'&&c!=='特注').length));
+  document.getElementById('stat-products').textContent = totalCodes;
+  const txs = LS.get('inv_tx',[]);
+  document.getElementById('stat-tx').textContent = txs.length;
+  const alerts = [];
+  Object.entries(getEffectiveProductData()).forEach(([sheet,data])=>{
+    data.colors.forEach((color,ci)=>{
+      data.products.forEach(p=>{
+        const code = p.codes[ci];
+        if(!code||code==='—'||code==='特注') return;
+        const inv = getInventory(code);
+        const minQty = p.qty || 0;
+        if(inv < minQty) alerts.push({sheet,name:p.name,color,code,inv,min:minQty});
+      });
+    });
+  });
+  document.getElementById('stat-alerts').textContent = alerts.length;
+  const alertEl = document.getElementById('alert-list');
+  if(alerts.length===0) {
+    alertEl.innerHTML = '<div class="empty"><div class="empty-icon">✅</div>要発注なし</div>';
+  } else {
+    alertEl.innerHTML = alerts.slice(0,20).map(a=>`
+      <div class="alert alert-danger">
+        <strong>${a.name}</strong> / ${a.color}<br>
+        <span style="font-size:12px;">品番:${a.code} 在庫:${a.inv} / 最低:${a.min}</span>
+      </div>`).join('');
+  }
+  const recent = [...txs].reverse().slice(0,5);
+  const rEl = document.getElementById('recent-tx');
+  if(recent.length===0) { rEl.innerHTML='<div class="empty">記録なし</div>'; return; }
+  rEl.innerHTML = recent.map(t=>`
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;">
+      <div><div style="font-weight:600;font-size:13px;">${t.name||t.code}</div>
+           <div style="font-size:11px;color:#888;">${t.date} ${t.note||''}</div></div>
+      <div style="text-align:right;">
+        <span class="badge ${t.type==='入庫'?'badge-success':'badge-danger'}">${t.type}</span>
+        <div style="font-weight:700;margin-top:4px;">${t.qty}</div>
+      </div>
+    </div>`).join('');
+}
+
+// TRANSACTIONS
+function renderTx() {
+  const txs = LS.get('inv_tx',[]);
+  const tbody = document.getElementById('tx-tbody');
+  if(txs.length===0) { tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#bbb;padding:24px;">記録なし</td></tr>'; return; }
+  // 不正データ（日付・品名・数量なしのもの）を除外
+  const validTxs = [...txs].filter(t => t.date && (t.name||t.code) && t.qty > 0);
+  tbody.innerHTML = validTxs.reverse().map(t=>`
+    <tr>
+      <td>${t.date}</td>
+      <td><div style="font-weight:600">${t.name||''}</div><div style="font-size:10px;color:#888;">${t.code}</div></td>
+      <td>${t.color||''}</td>
+      <td><span class="badge ${t.type==='入庫'?'badge-success':'badge-danger'}">${t.type}</span></td>
+      <td style="font-weight:700;">${t.qty}</td>
+      <td style="display:flex;gap:4px;">
+        <button class="btn btn-outline btn-sm" onclick="openEditTxModal('${t.id}')" style="padding:4px 8px;">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteTx('${t.id}')">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openAddTxModal() {
+  const sel = document.getElementById('tx-sheet');
+  sel.innerHTML = '<option value="">選択</option>' + Object.keys(getEffectiveProductData()).map(k=>`<option>${k}</option>`).join('');
+  document.getElementById('tx-product').innerHTML = '<option value="">選択</option>';
+  document.getElementById('tx-color').innerHTML = '<option value="">選択</option>';
+  document.getElementById('tx-code').value = '';
+  document.getElementById('tx-qty').value = '1';
+  document.getElementById('tx-date').value = today();
+  document.getElementById('tx-note').value = '';
+  document.getElementById('tx-type').value = '入庫';
+  // 選択状態をリセット
+  sel.selectedIndex = 0;
+  document.getElementById('overlay-add-tx').classList.add('active');
+}
+
+function updateTxProducts() {
+  const sheet = document.getElementById('tx-sheet').value;
+  const data = getEffectiveProductData()[sheet];
+  const sel = document.getElementById('tx-product');
+  sel.innerHTML = '<option value="">選択</option>';
+  if(!data) return;
+  data.products.forEach((p,i)=>{ sel.innerHTML+=`<option value="${i}">${p.name}</option>`; });
+  document.getElementById('tx-color').innerHTML='<option value="">選択</option>';
+  document.getElementById('tx-code').value='';
+}
+
+function updateTxColors() {
+  const sheet = document.getElementById('tx-sheet').value;
+  const pi = document.getElementById('tx-product').value;
+  const data = getEffectiveProductData()[sheet];
+  const sel = document.getElementById('tx-color');
+  sel.innerHTML='<option value="">選択</option>';
+  if(!data||pi==='') return;
+  const p = data.products[parseInt(pi)];
+  data.colors.forEach((c,ci)=>{
+    const code = p.codes[ci];
+    if(code&&code!=='—'&&code!=='特注') sel.innerHTML+=`<option value="${ci}">${c} (${code})</option>`;
+  });
+  document.getElementById('tx-code').value='';
+}
+
+function updateTxCode() {
+  const sheet=document.getElementById('tx-sheet').value;
+  const pi=document.getElementById('tx-product').value;
+  const ci=document.getElementById('tx-color').value;
+  const data=getEffectiveProductData()[sheet];
+  if(!data||pi===''||ci==='') return;
+  document.getElementById('tx-code').value = data.products[parseInt(pi)].codes[parseInt(ci)]||'';
+}
+
+function addTransaction() {
+  const sheet=document.getElementById('tx-sheet').value;
+  const pi=document.getElementById('tx-product').value;
+  const ci=document.getElementById('tx-color').value;
+  const code=document.getElementById('tx-code').value;
+  const qty=parseInt(document.getElementById('tx-qty').value);
+  const date=document.getElementById('tx-date').value;
+  const type=document.getElementById('tx-type').value;
+  const note=document.getElementById('tx-note').value;
+  // 厳密なバリデーション
+  if(!sheet) { alert('製品カテゴリを選択してください'); return; }
+  if(pi==='') { alert('製品名を選択してください'); return; }
+  if(ci==='') { alert('色を選択してください'); return; }
+  if(!code) { alert('品番が取得できません。色を選び直してください'); return; }
+  if(!qty || qty <= 0) { alert('数量を1以上で入力してください'); return; }
+  if(!date) { alert('日付を入力してください'); return; }
+  const epd=getEffectiveProductData()[sheet];
+  const p=epd.products[parseInt(pi)];
+  const color=epd.colors[parseInt(ci)];
+  // ユニークIDを生成（ミリ秒+ランダム）
+  const txId = 'tx' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  const tx = {id:txId, date, code, name:p.name, color, type, qty, note, sheet};
+  // ローカルに保存
+  const txs=LS.get('inv_tx',[]);
+  txs.push(tx);
+  LS.set('inv_tx',txs);
+  // GASに送信
+  gasPost({action:'addTransaction',id:tx.id,date:tx.date,code:tx.code,name:tx.name,color:tx.color,type:tx.type,qty:tx.qty,note:tx.note||''});
+  // 画面更新
+  closeOverlay('overlay-add-tx');
+  renderTx();
+  renderHome();
+  renderSummarySelects();
+  renderSummary();
+}
+
+function deleteTx(id) {
+  if(!confirm('この記録を削除しますか？')) return;
+  const txs=LS.get('inv_tx',[]).filter(t=>t.id!==id);
+  LS.set('inv_tx',txs);
+  gasPost({action:'deleteTransaction',id});
+  renderTx();
+}
+
+// PARTS
+function renderParts() {
+  const parts=LS.get('inv_parts',[]);
+  const el=document.getElementById('parts-list');
+  if(parts.length===0) { el.innerHTML='<div class="empty"><div class="empty-icon">🔧</div>部品なし</div>'; return; }
+  el.innerHTML=parts.map(p=>`
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start;">
+        <div style="flex:1;">
+          <div style="font-weight:700;">${p.name}</div>
+          <div style="font-size:11px;color:#888;">品番:${p.code}${p.cat?' | '+p.cat:''}</div>
+          ${p.loc?`<div style="font-size:11px;color:#888;">📍 ${p.loc}</div>`:''}
+          ${p.supplier?`<div style="font-size:11px;color:#888;">🏢 ${p.supplier}</div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="btn btn-outline btn-sm" onclick="openEditPartModal('${p.id}')" style="padding:4px 10px;">✏️ 編集</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePart('${p.id}')">✕</button>
+        </div>
+      </div>
+      <div style="margin-top:6px;font-size:12px;color:#555;">在庫:${getInventory(p.code)} / 最低:${p.min||0}${p.unit?' '+p.unit:''}${p.price?' | ¥'+p.price:''}</div>
+    </div>`).join('');
+}
+
+function openAddPartModal() {
+  ['part-code','part-name','part-cat','part-price','part-loc','part-supplier'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('part-unit').value='個';
+  document.getElementById('part-min').value='0';
+  document.getElementById('overlay-add-part').classList.add('active');
+}
+
+function addPart() {
+  const code=document.getElementById('part-code').value.trim();
+  const name=document.getElementById('part-name').value.trim();
+  if(!code||!name) { alert('品番と部品名は必須です'); return; }
+  const part = {id:'p'+Date.now(),code,name,cat:document.getElementById('part-cat').value,
+    unit:document.getElementById('part-unit').value,price:document.getElementById('part-price').value,
+    min:document.getElementById('part-min').value,loc:document.getElementById('part-loc').value,
+    supplier:document.getElementById('part-supplier').value};
+  const parts=LS.get('inv_parts',[]);
+  parts.push(part);
+  LS.set('inv_parts',parts);
+  gasPost({action:'addPart',id:part.id,code:part.code,name:part.name,cat:part.cat,unit:part.unit,price:part.price,min:part.min,loc:part.loc,supplier:part.supplier});
+  closeOverlay('overlay-add-part');
+  renderParts();
+}
+
+function deletePart(id) {
+  if(!confirm('削除しますか？')) return;
+  LS.set('inv_parts',LS.get('inv_parts',[]).filter(p=>p.id!==id));
+  gasPost({action:'deletePart',id});
+  renderParts();
+}
+
+// SUMMARY
+function renderSummarySelects() {
+  const sel=document.getElementById('summary-sheet-select');
+  const current=sel.value;
+  sel.innerHTML='<option value="">-- シートを選択 --</option>';
+  Object.keys(getEffectiveProductData()).forEach(k=>sel.innerHTML+=`<option${k===current?' selected':''}>${k}</option>`);
+}
+
+function renderSummary() {
+  const sheet=document.getElementById('summary-sheet-select').value;
+  const el=document.getElementById('summary-content');
+  if(!sheet) { el.innerHTML=''; return; }
+  const data=getEffectiveProductData()[sheet];
+  let rows='';
+  data.products.forEach(p=>{
+    data.colors.forEach((color,ci)=>{
+      const code=p.codes[ci];
+      if(!code||code==='—'||code==='特注') return;
+      const inv=getInventory(code);
+      const min=p.qty||0;
+      const shortage=inv<min;
+      rows+=`<tr style="background:${getColorBg(color)};">
+        <td><div style="font-weight:600;font-size:12px;">${p.name}</div><div style="font-size:10px;color:#888;">${code}</div></td>
+        <td>${color}</td>
+        <td class="${shortage?'shortage-cell':'ok-cell'}">${inv}</td>
+        <td>${min}</td>
+        <td>${shortage?'<span class="badge badge-danger">要発注</span>':'<span class="badge badge-success">OK</span>'}</td>
+      </tr>`;
+    });
+  });
+  el.innerHTML=`<div class="scroll-x"><table class="tbl">
+    <thead><tr><th>品名/品番</th><th>色</th><th>在庫</th><th>最低</th><th>状態</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+// MASTER
+function renderMasterSelects() {
+  const sel=document.getElementById('master-sheet-select');
+  if(sel.options.length<=1) Object.keys(getEffectiveProductData()).forEach(k=>sel.innerHTML+=`<option>${k}</option>`);
+}
+
+function renderMaster() {
+  const sheet=document.getElementById('master-sheet-select').value;
+  const el=document.getElementById('master-content');
+  if(!sheet) { el.innerHTML=''; return; }
+  const data=getEffectiveProductData()[sheet];
+  const pqty=LS.get('inv_pqty',{});
+  let rows='';
+  data.products.forEach(p=>{
+    data.colors.forEach((color,ci)=>{
+      const code=p.codes[ci];
+      if(!code||code==='—') return;
+      const isSpecial=code==='特注';
+      const initQty=isSpecial?'-':(pqty[code]!==undefined?pqty[code]:'');
+      rows+=`<tr>
+        <td><div style="font-weight:600;font-size:12px;">${p.name}</div></td>
+        <td>${color}</td><td style="font-size:11px;color:#666;">${code}</td>
+        <td>${isSpecial?'<span class="badge badge-warning">特注</span>':
+          `<span class="qty-stepper qty-stepper-sm">
+            <button type="button" onclick="qtyStep(this,-1)">−</button>
+            <input type="number" value="${initQty}" min="0" onchange="saveProductQty('${code}',this.value)" />
+            <button type="button" onclick="qtyStep(this,1)">＋</button>
+          </span>`}</td>
+        <td>${isSpecial?'-':getInventory(code)}</td>
+      </tr>`;
+    });
+  });
+  el.innerHTML=`<div class="scroll-x"><table class="tbl">
+    <thead><tr><th>品名</th><th>色</th><th>品番</th><th>初期在庫</th><th>現在庫</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+function saveProductQty(code, val) {
+  const pqty=LS.get('inv_pqty',{});
+  pqty[code]=Number(val);
+  LS.set('inv_pqty',pqty);
+  gasPost({action:'updateProductQty',code,qty:Number(val)});
+}
+
+// HIROI-DASHI
+function showNewHiroidashiForm() {
+  document.getElementById('hiroi-new-name').value='';
+  document.getElementById('hiroi-new-date').value=today();
+  document.getElementById('overlay-new-hiroi').classList.add('active');
+}
+
+function createHiroi() {
+  const name=document.getElementById('hiroi-new-name').value.trim();
+  const date=document.getElementById('hiroi-new-date').value;
+  if(!name) { alert('現場名を入力してください'); return; }
+  const hiroi={id:'h'+Date.now(),name,date,status:'draft',items:[]};
+  const list=LS.get('inv_hiroi',[]);
+  list.push(hiroi);
+  LS.set('inv_hiroi',list);
+  closeOverlay('overlay-new-hiroi');
+  openHiroiDetail(hiroi.id);
+}
+
+function renderHiroiList() {
+  const list=LS.get('inv_hiroi',[]);
+  const el=document.getElementById('hiroi-list');
+  document.getElementById('hiroi-list-view').style.display='block';
+  document.getElementById('hiroi-detail-view').style.display='none';
+  if(list.length===0) {
+    el.innerHTML='<div class="empty"><div class="empty-icon">📋</div>拾い出しがありません<br><small>上のボタンから作成できます</small></div>'; return;
+  }
+  el.innerHTML=[...list].reverse().map(h=>{
+    const shortCount=h.items.filter(item=>getInventory(item.code)<item.required).length;
+    return `<div class="hiroi-item" onclick="openHiroiDetail('${h.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:start;">
+        <div class="hiroi-name">${h.name}</div>
+        <span class="badge ${h.status==='confirmed'?'badge-gray':'badge-info'}">${h.status==='confirmed'?'確定済':'作成中'}</span>
+      </div>
+      <div class="hiroi-meta">📅 ${h.date} ・ ${h.items.length}点${shortCount>0?` ・ <span style="color:#c62828;">不足${shortCount}点</span>`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+function openHiroiDetail(id) {
+  currentHiroiId=id;
+  document.getElementById('hiroi-list-view').style.display='none';
+  document.getElementById('hiroi-detail-view').style.display='block';
+  renderHiroiDetail();
+}
+
+function backToHiroiList() {
+  currentHiroiId=null;
+  renderHiroiList();
+}
+
+function renderHiroiDetail() {
+  const list=LS.get('inv_hiroi',[]);
+  const hiroi=list.find(h=>h.id===currentHiroiId);
+  if(!hiroi) return;
+  document.getElementById('hiroi-detail-title').textContent=hiroi.name;
+  const confirmed=hiroi.status==='confirmed';
+  document.getElementById('hiroi-detail-status-badge').innerHTML=
+    `<span class="badge ${confirmed?'badge-gray':'badge-info'}">${confirmed?'確定済':'作成中'}</span>`;
+  const ctrl=document.getElementById('hiroi-detail-controls');
+  if(confirmed) {
+    const statusLabel = (hiroi.deducted===false)
+      ? '<span style="font-size:12px;color:#888;">✅ 確定済（在庫差引なし）</span>'
+      : '<span style="font-size:12px;color:#888;">✅ 出庫記録済み（在庫差引あり）</span>';
+    ctrl.innerHTML=`${statusLabel}
+      <button class="btn btn-danger btn-sm" onclick="deleteHiroi('${hiroi.id}')">削除</button>`;
+    document.getElementById('btn-add-item').style.display='none';
+  } else {
+    ctrl.innerHTML=`
+      <button class="btn btn-warning btn-sm" onclick="toggleOrderSection()">📬 発注リスト</button>
+      <button class="btn btn-success btn-sm" onclick="confirmHiroi()">✅ 確定</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteHiroi('${hiroi.id}')">削除</button>`;
+    document.getElementById('btn-add-item').style.display='';
+  }
+  const tbody=document.getElementById('hiroi-items-tbody');
+  if(hiroi.items.length===0) {
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#bbb;padding:16px;">部材が追加されていません</td></tr>';
+  } else {
+    tbody.innerHTML=hiroi.items.map((item,idx)=>{
+      const inv=getInventory(item.code);
+      const shortage=Math.max(0,item.required-inv);
+      const rowBg=getColorBg(item.colorName);
+      return `<tr style="background:${rowBg};">
+        <td style="font-size:12px;font-weight:600;">${item.productName}</td>
+        <td style="font-size:11px;">${item.colorName}</td>
+        <td style="font-size:10px;color:#888;">${item.code}</td>
+        <td style="text-align:center;font-weight:700;">${item.required}</td>
+        <td style="text-align:center;" class="${inv>=item.required?'ok-cell':'shortage-cell'}">${inv}</td>
+        <td style="text-align:center;" class="${shortage>0?'shortage-cell':'ok-cell'}">${shortage>0?shortage:'OK'}</td>
+        <td>${confirmed?'':`<button class="btn btn-danger btn-sm" onclick="removeHiroiItem(${idx})">✕</button>`}</td>
+      </tr>`;
+    }).join('');
+  }
+  renderOrderSection(hiroi);
+}
+
+function getOrderMode() {
+  const el=document.querySelector('input[name="order-mode"]:checked');
+  return el ? el.value : 'shortage';
+}
+
+function onOrderModeChange() {
+  const hiroi=LS.get('inv_hiroi',[]).find(h=>h.id===currentHiroiId);
+  if(hiroi) renderOrderSection(hiroi);
+}
+
+function renderOrderSection(hiroi) {
+  const section=document.getElementById('hiroi-order-section');
+  if(!section.style.display||section.style.display==='none') return;
+  const mode=getOrderMode(); // 'shortage' or 'full'
+  // モード別: shortage=在庫不足分のみ / full=拾い出し全量
+  const orderItems = (mode==='full')
+    ? hiroi.items.slice()
+    : hiroi.items.filter(item=>getInventory(item.code)<item.required);
+  const manualItems=hiroi.manualOrderItems||[];
+  // ヘッダーの数量カラム表示を切替
+  const qtyTh=document.getElementById('order-qty-th');
+  if(qtyTh) qtyTh.textContent = (mode==='full') ? '発注数' : '不足数';
+  const tbody=document.getElementById('order-tbody');
+  if(orderItems.length===0 && manualItems.length===0) {
+    const msg = (mode==='full')
+      ? '✅ 拾い出しに部材がありません'
+      : '✅ 全部材の在庫が充足しています';
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#2e7d32;padding:12px;">'+msg+'<br><span style="font-size:11px;color:#888;">下のフォームから商品を直接追加できます</span></td></tr>';
+  } else {
+    const autoRows=orderItems.map(item=>{
+      const inv=getInventory(item.code);
+      const qty = (mode==='full') ? item.required : (item.required-inv);
+      const rowBg=getColorBg(item.colorName);
+      return `<tr style="background:${rowBg};">
+        <td style="font-weight:600;font-size:12px;">${item.productName}</td>
+        <td style="font-size:11px;">${item.colorName||'—'}</td>
+        <td style="font-size:10px;color:#888;">${item.code}</td>
+        <td class="shortage-cell" style="text-align:center;font-weight:700;">${qty}</td>
+        <td></td>
+      </tr>`;
+    }).join('');
+    const manualRows=manualItems.map((item,idx)=>`<tr style="background:#fff9e6;">
+        <td style="font-weight:600;font-size:12px;">${item.name}<span style="font-size:10px;color:#f0a500;margin-left:4px;">手動</span></td>
+        <td style="font-size:11px;">${item.color||'—'}</td>
+        <td style="font-size:10px;color:#888;">${item.code||'—'}</td>
+        <td class="shortage-cell" style="text-align:center;font-weight:700;">${item.qty}</td>
+        <td><button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:11px;" onclick="removeManualOrderItem(${idx})">✕</button></td>
+      </tr>`).join('');
+    tbody.innerHTML=autoRows+manualRows;
+  }
+}
+
+function toggleOrderSection() {
+  const s=document.getElementById('hiroi-order-section');
+  const showing=s.style.display!=='none';
+  s.style.display=showing?'none':'block';
+  if(!showing) {
+    const hiroi=LS.get('inv_hiroi',[]).find(h=>h.id===currentHiroiId);
+    if(hiroi) renderOrderSection(hiroi);
+  }
+}
+
+function shareToLine() {
+  const hiroi=LS.get('inv_hiroi',[]).find(h=>h.id===currentHiroiId);
+  if(!hiroi) return;
+  const mode=getOrderMode(); // 'shortage' or 'full'
+  const orderItems = (mode==='full')
+    ? hiroi.items.slice()
+    : hiroi.items.filter(item=>getInventory(item.code)<item.required);
+  const manualItems=hiroi.manualOrderItems||[];
+  if(orderItems.length===0 && manualItems.length===0) { alert('発注リストに商品がありません'); return; }
+  const modeLabel = (mode==='full') ? '拾い出し全量' : '不足分のみ';
+  const lines=[
+    '【発注リスト】',
+    hiroi.name,
+    hiroi.date,
+    '（'+modeLabel+'）',
+    '──────────────',
+    ...orderItems.map(item=>{
+      const inv=getInventory(item.code);
+      const qty = (mode==='full') ? item.required : (item.required-inv);
+      const color=item.colorName?` / ${item.colorName}`:'';
+      return `・${item.productName}${color}\n  品番:${item.code}　数量:${qty}`;
+    }),
+    ...manualItems.map(item=>{
+      const color=item.color?` / ${item.color}`:'';
+      const code=item.code?`\n  品番:${item.code}`:'';
+      return `・${item.name}${color}${code}　数量:${item.qty}`;
+    }),
+    '──────────────',
+    `合計 ${orderItems.length+manualItems.length}品目`,
+  ];
+  const text=lines.join('\n');
+  const url='https://line.me/R/msg/text/?'+encodeURIComponent(text);
+  window.open(url,'_blank');
+}
+
+function addManualOrderItem() {
+  const name=document.getElementById('manual-order-name').value.trim();
+  const code=document.getElementById('manual-order-code').value.trim();
+  const color=document.getElementById('manual-order-color').value.trim();
+  const qty=parseInt(document.getElementById('manual-order-qty').value)||1;
+  if(!name) { alert('品名を入力してください'); return; }
+  const list=LS.get('inv_hiroi',[]);
+  const hiroi=list.find(h=>h.id===currentHiroiId);
+  if(!hiroi) return;
+  if(!hiroi.manualOrderItems) hiroi.manualOrderItems=[];
+  hiroi.manualOrderItems.push({name,code,color,qty});
+  LS.set('inv_hiroi',list);
+  // フォームをクリア
+  document.getElementById('manual-order-name').value='';
+  document.getElementById('manual-order-code').value='';
+  document.getElementById('manual-order-color').value='';
+  document.getElementById('manual-order-qty').value='1';
+  renderOrderSection(hiroi);
+}
+
+function removeManualOrderItem(idx) {
+  const list=LS.get('inv_hiroi',[]);
+  const hiroi=list.find(h=>h.id===currentHiroiId);
+  if(!hiroi||!hiroi.manualOrderItems) return;
+  hiroi.manualOrderItems.splice(idx,1);
+  LS.set('inv_hiroi',list);
+  renderOrderSection(hiroi);
+}
+
+// 色名→薄い背景色マッピング
+function getColorBg(colorName) {
+  const n = colorName || '';
+  if(/ブラック|クロ/.test(n)) return 'rgba(100,100,110,0.18)';
+  if(/しんちゃ|シンチャ/.test(n)) return 'rgba(160,80,50,0.15)';
+  if(/ブラウン|オークブラウン/.test(n)) return 'rgba(150,100,50,0.15)';
+  if(/グリーン/.test(n)) return 'rgba(50,150,80,0.12)';
+  if(/ブルー/.test(n)) return 'rgba(50,100,200,0.12)';
+  if(/ホワイト/.test(n)) return 'rgba(200,210,220,0.15)';
+  if(/シルバー|ステンシルバー/.test(n)) return 'rgba(170,180,195,0.18)';
+  if(/パールグレー/.test(n)) return 'rgba(160,165,175,0.15)';
+  if(/オークグレー|スレートグレー|アーバングレー/.test(n)) return 'rgba(130,135,145,0.18)';
+  if(/コアグレー|メタリックグレー/.test(n)) return 'rgba(140,145,155,0.15)';
+  if(/モダンベージュ|アイボリー/.test(n)) return 'rgba(200,180,130,0.15)';
+  if(/ねずみ/.test(n)) return 'rgba(150,150,155,0.15)';
+  if(/あか/.test(n)) return 'rgba(210,60,60,0.10)';
+  if(/ディープブラウン/.test(n)) return 'rgba(120,70,30,0.18)';
+  if(/スレートブラック/.test(n)) return 'rgba(60,65,75,0.20)';
+  if(/マットシルバー/.test(n)) return 'rgba(180,185,195,0.15)';
+  if(/トーメイ/.test(n)) return 'rgba(180,220,240,0.12)';
+  return 'transparent';
+}
+function getColorHeaderBg(colorName) {
+  const n = colorName || '';
+  if(/ブラック|クロ/.test(n)) return 'rgba(80,80,90,0.45)';
+  if(/しんちゃ|シンチャ/.test(n)) return 'rgba(140,60,30,0.40)';
+  if(/ブラウン|オークブラウン/.test(n)) return 'rgba(130,80,30,0.40)';
+  if(/グリーン/.test(n)) return 'rgba(40,120,60,0.35)';
+  if(/ブルー/.test(n)) return 'rgba(40,80,180,0.35)';
+  if(/ホワイト/.test(n)) return 'rgba(180,190,205,0.30)';
+  if(/シルバー|ステンシルバー/.test(n)) return 'rgba(150,160,175,0.35)';
+  if(/パールグレー/.test(n)) return 'rgba(140,145,160,0.30)';
+  if(/オークグレー|スレートグレー|アーバングレー/.test(n)) return 'rgba(110,115,130,0.35)';
+  if(/コアグレー|メタリックグレー/.test(n)) return 'rgba(120,125,140,0.30)';
+  if(/モダンベージュ|アイボリー/.test(n)) return 'rgba(180,160,110,0.30)';
+  if(/ねずみ/.test(n)) return 'rgba(130,130,140,0.30)';
+  if(/あか/.test(n)) return 'rgba(190,40,40,0.25)';
+  if(/ディープブラウン/.test(n)) return 'rgba(100,50,15,0.40)';
+  if(/スレートブラック/.test(n)) return 'rgba(50,55,65,0.45)';
+  if(/マットシルバー/.test(n)) return 'rgba(160,165,180,0.30)';
+  if(/トーメイ/.test(n)) return 'rgba(160,200,230,0.25)';
+  return '#1e3a5f';
+}
+
+// 前回選択カテゴリを記憶
+let lastItemSheet = '';
+
+function showAddItemModal() {
+  const sel=document.getElementById('item-sheet');
+  const parts=LS.get('inv_parts',[]);
+  const partsOption=parts.length>0?'<option value="__parts__">📦 部品マスタ</option>':'';
+  sel.innerHTML='<option value="">選択してください</option>'+partsOption+Object.keys(getEffectiveProductData()).map(k=>`<option>${k}</option>`).join('');
+  document.getElementById('item-table-container').innerHTML='';
+  document.getElementById('btn-add-items-table').style.display='none';
+  if(lastItemSheet) { sel.value=lastItemSheet; showItemTable(); }
+  document.getElementById('overlay-add-item').classList.add('active');
+}
+
+function showItemTable() {
+  const sheet=document.getElementById('item-sheet').value;
+  const container=document.getElementById('item-table-container');
+  const btn=document.getElementById('btn-add-items-table');
+  if(!sheet) { container.innerHTML=''; btn.style.display='none'; return; }
+  lastItemSheet=sheet;
+
+  // 部品マスタの場合
+  if(sheet==='__parts__') {
+    const parts=LS.get('inv_parts',[]);
+    if(parts.length===0) { container.innerHTML='<p style="color:#888;font-size:12px;padding:8px;">部品マスタに部品がありません</p>'; btn.style.display='none'; return; }
+    let rows='';
+    parts.forEach((p,i)=>{
+      const inv=getInventory(p.code);
+      rows+=`<tr>
+        <td style="font-size:12px;font-weight:600;">${p.name}<div style="font-size:10px;color:#888;">${p.code}</div></td>
+        <td style="text-align:center;padding:4px;">
+          <div style="font-size:10px;color:#888;margin-bottom:2px;">在庫:${inv}</div>
+          <span class="qty-stepper qty-stepper-sm">
+            <button type="button" onclick="qtyStep(this,-1)">−</button>
+            <input type="number" min="0" placeholder="0"
+              data-code="${p.code}" data-name="${p.name}" data-color="" data-ci="-1" data-pi="${i}"
+              oninput="this.style.background=this.value&&parseInt(this.value)>0?'#fff9c4':'';"
+            />
+            <button type="button" onclick="qtyStep(this,1)">＋</button>
+          </span>
+        </td>
+      </tr>`;
+    });
+    container.innerHTML=`
+      <p style="font-size:11px;color:#888;margin-bottom:6px;">必要な数量を入力してください（0または空欄はスキップ）</p>
+      <table class="tbl" style="border-collapse:collapse;">
+        <thead><tr><th>品名 / 品番</th><th style="min-width:120px;text-align:center;">数量</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    btn.style.display='';
+    return;
+  }
+
+  // 製品マスタの場合
+  const data=getEffectiveProductData()[sheet];
+  const colors=data.colors;
+  let thead='<tr><th style="min-width:120px;position:sticky;left:0;top:0;background:#1e3a5f;z-index:3;">品名</th>';
+  colors.forEach(c=>{ thead+=`<th style="min-width:110px;text-align:center;font-size:11px;background:${getColorHeaderBg(c)};border-left:1px solid rgba(255,255,255,0.1);position:sticky;top:0;z-index:1;">${c}</th>`; });
+  thead+='</tr>';
+
+  let rows='';
+  data.products.forEach((p,pi)=>{
+    if(p.section) {
+      rows+=`<tr><td colspan="${colors.length+1}" style="background:#e8f0f8;font-size:11px;font-weight:700;color:#1e3a5f;padding:6px 8px;position:sticky;left:0;">${p.section}</td></tr>`;
+    }
+    rows+=`<tr>`;
+    rows+=`<td style="font-size:12px;font-weight:600;min-width:120px;position:sticky;left:0;background:#fff;border-right:2px solid #e0e0e0;">${p.name}</td>`;
+    colors.forEach((c,ci)=>{
+      const code=p.codes[ci];
+      const valid=code&&code!=='—'&&code!=='特注';
+      const inv=valid?getInventory(code):0;
+      const cellBg=getColorBg(c);
+      if(!valid) {
+        const label=code==='特注'?'特注':'-';
+        rows+=`<td style="text-align:center;color:#bbb;font-size:11px;background:${cellBg};border-left:1px solid #e8e8e8;">${label}</td>`;
+      } else {
+        rows+=`<td style="text-align:center;padding:4px;background:${cellBg};border-left:1px solid #e8e8e8;">
+          <div style="font-size:10px;color:#888;margin-bottom:2px;">在庫:${inv}</div>
+          <span class="qty-stepper qty-stepper-sm">
+            <button type="button" onclick="qtyStep(this,-1)">−</button>
+            <input type="number" min="0" placeholder="0"
+              data-pi="${pi}" data-ci="${ci}" data-code="${code}" data-name="${p.name}" data-color="${c}"
+              oninput="this.style.background=this.value&&parseInt(this.value)>0?'#fff9c4':'';"
+            />
+            <button type="button" onclick="qtyStep(this,1)">＋</button>
+          </span>
+        </td>`;
+      }
+    });
+    rows+='</tr>';
+  });
+
+  container.innerHTML=`
+    <p style="font-size:11px;color:#888;margin-bottom:6px;">必要な数量を入力してください（0または空欄はスキップ）</p>
+    <table class="tbl" style="border-collapse:collapse;">
+      <thead>${thead}</thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+  btn.style.display='';
+}
+
+function addItemsFromTable() {
+  const sheet=document.getElementById('item-sheet').value;
+  if(!sheet) return;
+  const inputs=document.querySelectorAll('#item-table-container input[type=number]');
+  const newItems=[];
+  inputs.forEach(inp=>{
+    const qty=parseInt(inp.value);
+    if(!qty||qty<=0) return;
+    newItems.push({
+      sheet,
+      productName: inp.dataset.name,
+      colorIndex: parseInt(inp.dataset.ci),
+      colorName: inp.dataset.color,
+      code: inp.dataset.code,
+      required: qty,
+    });
+  });
+  if(newItems.length===0) { alert('数量を入力してください（1以上）'); return; }
+  const list=LS.get('inv_hiroi',[]);
+  const hiroi=list.find(h=>h.id===currentHiroiId);
+  if(!hiroi) return;
+  hiroi.items.push(...newItems);
+  LS.set('inv_hiroi',list);
+  closeOverlay('overlay-add-item');
+  renderHiroiDetail();
+}
+
+function removeHiroiItem(idx) {
+  const list=LS.get('inv_hiroi',[]);
+  const hiroi=list.find(h=>h.id===currentHiroiId);
+  if(!hiroi) return;
+  hiroi.items.splice(idx,1);
+  LS.set('inv_hiroi',list);
+  renderHiroiDetail();
+}
+
+function confirmHiroi() {
+  const list=LS.get('inv_hiroi',[]);
+  const hiroi=list.find(h=>h.id===currentHiroiId);
+  if(!hiroi) return;
+  if(hiroi.items.length===0) { alert('部材を追加してください'); return; }
+  // ① 確定するかの確認
+  if(!confirm('「'+hiroi.name+'」を確定しますか？')) return;
+  // ② 在庫から差し引くかの選択
+  //   OK    → 在庫から差し引く（出庫記録を作成）
+  //   キャンセル → 差し引かない（出庫記録は作成しない）
+  const deduct = confirm('在庫から差し引きますか？\n\n[OK] 差し引く（出庫記録に登録）\n[キャンセル] 差し引かない（記録のみ・在庫はそのまま）');
+  if(deduct) {
+    const txs=LS.get('inv_tx',[]);
+    const t=today();
+    hiroi.items.forEach(item=>{
+      const tx={
+        id:'tx'+Date.now()+Math.random().toString(36).slice(2),
+        date:t, code:item.code, name:item.productName, color:item.colorName,
+        type:'出庫', qty:item.required, note:'拾い出し:'+hiroi.name, sheet:item.sheet
+      };
+      txs.push(tx);
+      gasPost({action:'addTransaction',id:tx.id,date:tx.date,code:tx.code,name:tx.name,color:tx.color,type:tx.type,qty:tx.qty,note:tx.note});
+    });
+    LS.set('inv_tx',txs);
+    hiroi.status='confirmed';
+    hiroi.deducted=true;
+    LS.set('inv_hiroi',list);
+    renderHiroiDetail();
+    alert('✅ 出庫記録に登録しました（在庫から差し引き済み）');
+  } else {
+    hiroi.status='confirmed';
+    hiroi.deducted=false;
+    LS.set('inv_hiroi',list);
+    renderHiroiDetail();
+    alert('✅ 確定しました（在庫は差し引いていません）');
+  }
+}
+
+function deleteHiroi(id) {
+  if(!confirm('この拾い出しを削除しますか？（出庫記録は残ります）')) return;
+  LS.set('inv_hiroi',LS.get('inv_hiroi',[]).filter(h=>h.id!==id));
+  backToHiroiList();
+}
+
+
+// EDIT PART
+function openEditPartModal(id) {
+  const parts = LS.get('inv_parts', []);
+  const p = parts.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('edit-part-id').value = p.id;
+  document.getElementById('edit-part-code').value = p.code || '';
+  document.getElementById('edit-part-name').value = p.name || '';
+  document.getElementById('edit-part-cat').value = p.cat || '';
+  document.getElementById('edit-part-unit').value = p.unit || '個';
+  document.getElementById('edit-part-price').value = p.price || '';
+  document.getElementById('edit-part-min').value = p.min || 0;
+  document.getElementById('edit-part-loc').value = p.loc || '';
+  document.getElementById('edit-part-supplier').value = p.supplier || '';
+  document.getElementById('overlay-edit-part').classList.add('active');
+}
+
+function saveEditPart() {
+  const id = document.getElementById('edit-part-id').value;
+  const code = document.getElementById('edit-part-code').value.trim();
+  const name = document.getElementById('edit-part-name').value.trim();
+  if (!code || !name) { alert('品番と部品名は必須です'); return; }
+  const parts = LS.get('inv_parts', []);
+  const idx = parts.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  parts[idx] = Object.assign(parts[idx], {
+    code, name,
+    cat: document.getElementById('edit-part-cat').value,
+    unit: document.getElementById('edit-part-unit').value,
+    price: document.getElementById('edit-part-price').value,
+    min: document.getElementById('edit-part-min').value,
+    loc: document.getElementById('edit-part-loc').value,
+    supplier: document.getElementById('edit-part-supplier').value,
+  });
+  LS.set('inv_parts', parts);
+  gasPost({action:'updatePart', ...parts[idx]});
+  closeOverlay('overlay-edit-part');
+  renderParts();
+}
+
+// EDIT TRANSACTION
+function openEditTxModal(id) {
+  const txs = LS.get('inv_tx', []);
+  const tx = txs.find(t => t.id === id);
+  if (!tx) return;
+  document.getElementById('edit-tx-id').value = tx.id;
+  document.getElementById('edit-tx-type').value = tx.type;
+  document.getElementById('edit-tx-qty').value = tx.qty;
+  document.getElementById('edit-tx-date').value = tx.date;
+  document.getElementById('edit-tx-note').value = tx.note || '';
+  document.getElementById('overlay-edit-tx').classList.add('active');
+}
+
+function saveEditTx() {
+  const id = document.getElementById('edit-tx-id').value;
+  const qty = parseInt(document.getElementById('edit-tx-qty').value);
+  const date = document.getElementById('edit-tx-date').value;
+  const type = document.getElementById('edit-tx-type').value;
+  const note = document.getElementById('edit-tx-note').value;
+  if (!qty || !date) { alert('数量と日付は必須です'); return; }
+  const txs = LS.get('inv_tx', []);
+  const idx = txs.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  txs[idx] = Object.assign(txs[idx], { type, qty, date, note });
+  LS.set('inv_tx', txs);
+  gasPost({action:'updateTransaction', id, type, qty, date, note});
+  closeOverlay('overlay-edit-tx');
+  renderTx();
+  if (currentTab === 'home') renderHome();
+}
+
+function today() { return new Date().toLocaleDateString('sv-SE'); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('active'); }
+function renderAll() {
+  if(currentTab==='home') renderHome();
+  else if(currentTab==='hiroi') { if(currentHiroiId) renderHiroiDetail(); else renderHiroiList(); }
+  else if(currentTab==='tx') renderTx();
+  else if(currentTab==='summary') { renderSummarySelects(); renderSummary(); }
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  updateConnStatus();
+  renderMasterSelects();
+  renderSummarySelects();
+  renderHome();
+  // 自動同期の初期化
+  setTimeout(()=>{
+    updateAutoSyncStatus();
+    if (autoSyncEnabled && GAS_URL) startAutoSync();
+  }, 500);
+  // 設定タブを開いたときにUIを更新
+  const origSwitchTab = switchTab;
+});
+</script>
+</body>
+</html>
