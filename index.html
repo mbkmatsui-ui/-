@@ -70,6 +70,18 @@ select.form-control{-webkit-appearance:none;appearance:none;background-image:url
 .overlay.active{display:flex;align-items:flex-end;}
 .modal{background:#fff;border-radius:16px 16px 0 0;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom));width:100%;max-width:480px;margin:0 auto;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .modal-title{font-size:16px;font-weight:700;margin-bottom:16px;color:#1e3a5f;}
+/* 数量ステッパー（iPhone対応の＋／−ボタン） */
+.qty-stepper{display:inline-flex;align-items:stretch;border:1.5px solid #e0e0e0;border-radius:8px;overflow:hidden;background:#fff;vertical-align:middle;}
+.qty-stepper input[type="number"]{border:none;outline:none;text-align:center;font-size:16px;width:64px;min-width:0;padding:8px 4px;background:transparent;-webkit-appearance:none;-moz-appearance:textfield;appearance:none;}
+.qty-stepper input[type="number"]::-webkit-inner-spin-button,
+.qty-stepper input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+.qty-stepper button{border:none;background:#e8f0f8;color:#1e3a5f;width:38px;font-size:20px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;}
+.qty-stepper button:active{background:#b3d4f5;}
+.qty-stepper-block{display:flex;width:100%;}
+.qty-stepper-block input[type="number"]{flex:1;}
+.qty-stepper-sm{border-width:1px;border-radius:6px;}
+.qty-stepper-sm input[type="number"]{width:48px;font-size:13px;padding:4px 2px;}
+.qty-stepper-sm button{width:26px;font-size:14px;}
 </style>
 </head>
 <body>
@@ -124,10 +136,23 @@ select.form-control{-webkit-appearance:none;appearance:none;background-image:url
     </div>
     <div id="hiroi-order-section" style="display:none;margin-top:16px;">
       <div class="card">
-        <div class="card-title">📬 発注リスト（不足分）</div>
+        <div class="card-title">📬 発注リスト</div>
+        <div style="margin-bottom:10px;padding:8px;background:#f0f4f8;border-radius:8px;">
+          <div style="font-size:12px;font-weight:600;color:#1e3a5f;margin-bottom:6px;">発注対象</div>
+          <div style="display:flex;gap:6px;">
+            <label style="flex:1;display:flex;align-items:center;gap:4px;padding:6px 8px;background:#fff;border-radius:6px;border:1.5px solid #e0e0e0;cursor:pointer;font-size:12px;">
+              <input type="radio" name="order-mode" value="shortage" checked onchange="onOrderModeChange()" style="margin:0;" />
+              <span>不足分のみ</span>
+            </label>
+            <label style="flex:1;display:flex;align-items:center;gap:4px;padding:6px 8px;background:#fff;border-radius:6px;border:1.5px solid #e0e0e0;cursor:pointer;font-size:12px;">
+              <input type="radio" name="order-mode" value="full" onchange="onOrderModeChange()" style="margin:0;" />
+              <span>拾い出し全量</span>
+            </label>
+          </div>
+        </div>
         <div class="scroll-x">
         <table class="tbl" id="order-table">
-          <thead><tr><th>品名</th><th>色</th><th>品番</th><th>不足数</th><th></th></tr></thead>
+          <thead><tr><th>品名</th><th>色</th><th>品番</th><th id="order-qty-th">不足数</th><th></th></tr></thead>
           <tbody id="order-tbody"></tbody>
         </table>
         </div>
@@ -138,7 +163,11 @@ select.form-control{-webkit-appearance:none;appearance:none;background-image:url
             <input type="text" id="manual-order-code" class="form-control" placeholder="品番（任意）" style="font-size:13px;" />
             <div style="display:flex;gap:6px;">
               <input type="text" id="manual-order-color" class="form-control" placeholder="色（任意）" style="font-size:13px;flex:1;" />
-              <input type="number" id="manual-order-qty" class="form-control" placeholder="数量" min="1" value="1" style="font-size:13px;width:80px;" />
+              <span class="qty-stepper">
+                <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+                <input type="number" id="manual-order-qty" placeholder="数量" min="1" value="1" />
+                <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+              </span>
             </div>
             <button class="btn btn-primary btn-sm btn-block" onclick="addManualOrderItem()">追加する</button>
           </div>
@@ -266,7 +295,11 @@ select.form-control{-webkit-appearance:none;appearance:none;background-image:url
     <div class="form-group"><label>品番（自動入力）</label>
       <input type="text" class="form-control" id="tx-code" readonly style="background:#f8f9fa;" /></div>
     <div class="form-group"><label>数量</label>
-      <input type="number" class="form-control" id="tx-qty" min="1" value="1" /></div>
+      <span class="qty-stepper qty-stepper-block">
+        <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+        <input type="number" id="tx-qty" min="1" value="1" />
+        <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+      </span></div>
     <div class="form-group"><label>日付</label>
       <input type="date" class="form-control" id="tx-date" /></div>
     <div class="form-group"><label>備考</label>
@@ -283,7 +316,12 @@ select.form-control{-webkit-appearance:none;appearance:none;background-image:url
     <div class="form-group"><label>カテゴリ</label><input type="text" class="form-control" id="part-cat" /></div>
     <div class="form-group"><label>単位</label><input type="text" class="form-control" id="part-unit" value="個" /></div>
     <div class="form-group"><label>単価</label><input type="number" class="form-control" id="part-price" /></div>
-    <div class="form-group"><label>最低在庫数</label><input type="number" class="form-control" id="part-min" value="0" /></div>
+    <div class="form-group"><label>最低在庫数</label>
+      <span class="qty-stepper qty-stepper-block">
+        <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+        <input type="number" id="part-min" min="0" value="0" />
+        <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+      </span></div>
     <div class="form-group"><label>保管場所</label><input type="text" class="form-control" id="part-loc" /></div>
     <div class="form-group"><label>仕入先</label><input type="text" class="form-control" id="part-supplier" /></div>
     <button class="btn btn-primary btn-block" onclick="addPart()">追加する</button>
@@ -308,7 +346,7 @@ select.form-control{-webkit-appearance:none;appearance:none;background-image:url
       <label>製品カテゴリ</label>
       <select class="form-control" id="item-sheet" onchange="showItemTable()"><option value="">選択してください</option></select>
     </div>
-    <div id="item-table-container" style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;"></div>
+    <div id="item-table-container" style="overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;max-height:60vh;"></div>
     <button class="btn btn-primary btn-block" id="btn-add-items-table" style="display:none;" onclick="addItemsFromTable()">✅ 入力した部材を追加</button>
   </div>
 </div>
@@ -323,7 +361,12 @@ select.form-control{-webkit-appearance:none;appearance:none;background-image:url
     <div class="form-group"><label>カテゴリ</label><input type="text" class="form-control" id="edit-part-cat" /></div>
     <div class="form-group"><label>単位</label><input type="text" class="form-control" id="edit-part-unit" value="個" /></div>
     <div class="form-group"><label>単価</label><input type="number" class="form-control" id="edit-part-price" /></div>
-    <div class="form-group"><label>最低在庫数</label><input type="number" class="form-control" id="edit-part-min" value="0" /></div>
+    <div class="form-group"><label>最低在庫数</label>
+      <span class="qty-stepper qty-stepper-block">
+        <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+        <input type="number" id="edit-part-min" min="0" value="0" />
+        <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+      </span></div>
     <div class="form-group"><label>保管場所</label><input type="text" class="form-control" id="edit-part-loc" /></div>
     <div class="form-group"><label>仕入先</label><input type="text" class="form-control" id="edit-part-supplier" /></div>
     <div style="display:flex;gap:8px;">
@@ -339,7 +382,11 @@ select.form-control{-webkit-appearance:none;appearance:none;background-image:url
     <div class="form-group"><label>種別</label>
       <select class="form-control" id="edit-tx-type"><option value="入庫">入庫</option><option value="出庫">出庫</option></select></div>
     <div class="form-group"><label>数量</label>
-      <input type="number" class="form-control" id="edit-tx-qty" min="1" /></div>
+      <span class="qty-stepper qty-stepper-block">
+        <button type="button" onclick="qtyStep(this,-1)" ontouchstart="qtyHoldStart(this,-1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,-1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">−</button>
+        <input type="number" id="edit-tx-qty" min="1" />
+        <button type="button" onclick="qtyStep(this,1)" ontouchstart="qtyHoldStart(this,1)" ontouchend="qtyHoldEnd()" ontouchcancel="qtyHoldEnd()" onmousedown="qtyHoldStart(this,1)" onmouseup="qtyHoldEnd()" onmouseleave="qtyHoldEnd()">＋</button>
+      </span></div>
     <div class="form-group"><label>日付</label>
       <input type="date" class="form-control" id="edit-tx-date" /></div>
     <div class="form-group"><label>備考</label>
@@ -359,6 +406,40 @@ const LS = {
   get: (k, def) => { try{ return JSON.parse(localStorage.getItem(k)) ?? def; }catch{return def;} },
   set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
 };
+
+// 数量ステッパー（iPhoneでも＋／−ボタンで数量変更）
+function qtyStep(btn, delta){
+  const wrap = btn.closest('.qty-stepper');
+  if(!wrap) return;
+  const input = wrap.querySelector('input[type="number"]');
+  if(!input) return;
+  const minAttr = input.getAttribute('min');
+  const maxAttr = input.getAttribute('max');
+  const min = (minAttr!==null && minAttr!=='') ? parseFloat(minAttr) : -Infinity;
+  const max = (maxAttr!==null && maxAttr!=='') ? parseFloat(maxAttr) : Infinity;
+  const cur = parseFloat(input.value);
+  const base = isNaN(cur) ? (min===-Infinity?0:min) : cur;
+  let next = base + delta;
+  if(next < min) next = min;
+  if(next > max) next = max;
+  input.value = next;
+  input.dispatchEvent(new Event('input', {bubbles:true}));
+  input.dispatchEvent(new Event('change', {bubbles:true}));
+  // ロングプレスのリピート用
+  return next;
+}
+// ロングプレスで連続増減
+let _qtyHoldTimer = null, _qtyHoldInterval = null;
+function qtyHoldStart(btn, delta){
+  qtyStep(btn, delta);
+  _qtyHoldTimer = setTimeout(function(){
+    _qtyHoldInterval = setInterval(function(){ qtyStep(btn, delta); }, 80);
+  }, 400);
+}
+function qtyHoldEnd(){
+  if(_qtyHoldTimer){ clearTimeout(_qtyHoldTimer); _qtyHoldTimer=null; }
+  if(_qtyHoldInterval){ clearInterval(_qtyHoldInterval); _qtyHoldInterval=null; }
+}
 
 let currentTab = 'home';
 let currentHiroiId = null;
@@ -952,7 +1033,7 @@ function renderSummary() {
       const inv=getInventory(code);
       const min=p.qty||0;
       const shortage=inv<min;
-      rows+=`<tr>
+      rows+=`<tr style="background:${getColorBg(color)};">
         <td><div style="font-weight:600;font-size:12px;">${p.name}</div><div style="font-size:10px;color:#888;">${code}</div></td>
         <td>${color}</td>
         <td class="${shortage?'shortage-cell':'ok-cell'}">${inv}</td>
@@ -989,7 +1070,11 @@ function renderMaster() {
         <td><div style="font-weight:600;font-size:12px;">${p.name}</div></td>
         <td>${color}</td><td style="font-size:11px;color:#666;">${code}</td>
         <td>${isSpecial?'<span class="badge badge-warning">特注</span>':
-          `<input type="number" style="width:60px;border:1px solid #ddd;border-radius:4px;padding:2px 4px;font-size:12px;" value="${initQty}" min="0" onchange="saveProductQty('${code}',this.value)" />`}</td>
+          `<span class="qty-stepper qty-stepper-sm">
+            <button type="button" onclick="qtyStep(this,-1)">−</button>
+            <input type="number" value="${initQty}" min="0" onchange="saveProductQty('${code}',this.value)" />
+            <button type="button" onclick="qtyStep(this,1)">＋</button>
+          </span>`}</td>
         <td>${isSpecial?'-':getInventory(code)}</td>
       </tr>`;
     });
@@ -1067,13 +1152,16 @@ function renderHiroiDetail() {
     `<span class="badge ${confirmed?'badge-gray':'badge-info'}">${confirmed?'確定済':'作成中'}</span>`;
   const ctrl=document.getElementById('hiroi-detail-controls');
   if(confirmed) {
-    ctrl.innerHTML=`<span style="font-size:12px;color:#888;">✅ 出庫記録済み</span>
+    const statusLabel = (hiroi.deducted===false)
+      ? '<span style="font-size:12px;color:#888;">✅ 確定済（在庫差引なし）</span>'
+      : '<span style="font-size:12px;color:#888;">✅ 出庫記録済み（在庫差引あり）</span>';
+    ctrl.innerHTML=`${statusLabel}
       <button class="btn btn-danger btn-sm" onclick="deleteHiroi('${hiroi.id}')">削除</button>`;
     document.getElementById('btn-add-item').style.display='none';
   } else {
     ctrl.innerHTML=`
       <button class="btn btn-warning btn-sm" onclick="toggleOrderSection()">📬 発注リスト</button>
-      <button class="btn btn-success btn-sm" onclick="confirmHiroi()">✅ 確定（出庫）</button>
+      <button class="btn btn-success btn-sm" onclick="confirmHiroi()">✅ 確定</button>
       <button class="btn btn-danger btn-sm" onclick="deleteHiroi('${hiroi.id}')">削除</button>`;
     document.getElementById('btn-add-item').style.display='';
   }
@@ -1084,7 +1172,8 @@ function renderHiroiDetail() {
     tbody.innerHTML=hiroi.items.map((item,idx)=>{
       const inv=getInventory(item.code);
       const shortage=Math.max(0,item.required-inv);
-      return `<tr>
+      const rowBg=getColorBg(item.colorName);
+      return `<tr style="background:${rowBg};">
         <td style="font-size:12px;font-weight:600;">${item.productName}</td>
         <td style="font-size:11px;">${item.colorName}</td>
         <td style="font-size:10px;color:#888;">${item.code}</td>
@@ -1098,22 +1187,44 @@ function renderHiroiDetail() {
   renderOrderSection(hiroi);
 }
 
+function getOrderMode() {
+  const el=document.querySelector('input[name="order-mode"]:checked');
+  return el ? el.value : 'shortage';
+}
+
+function onOrderModeChange() {
+  const hiroi=LS.get('inv_hiroi',[]).find(h=>h.id===currentHiroiId);
+  if(hiroi) renderOrderSection(hiroi);
+}
+
 function renderOrderSection(hiroi) {
   const section=document.getElementById('hiroi-order-section');
   if(!section.style.display||section.style.display==='none') return;
-  const orderItems=hiroi.items.filter(item=>getInventory(item.code)<item.required);
+  const mode=getOrderMode(); // 'shortage' or 'full'
+  // モード別: shortage=在庫不足分のみ / full=拾い出し全量
+  const orderItems = (mode==='full')
+    ? hiroi.items.slice()
+    : hiroi.items.filter(item=>getInventory(item.code)<item.required);
   const manualItems=hiroi.manualOrderItems||[];
+  // ヘッダーの数量カラム表示を切替
+  const qtyTh=document.getElementById('order-qty-th');
+  if(qtyTh) qtyTh.textContent = (mode==='full') ? '発注数' : '不足数';
   const tbody=document.getElementById('order-tbody');
   if(orderItems.length===0 && manualItems.length===0) {
-    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#2e7d32;padding:12px;">✅ 全部材の在庫が充足しています<br><span style="font-size:11px;color:#888;">下のフォームから商品を直接追加できます</span></td></tr>';
+    const msg = (mode==='full')
+      ? '✅ 拾い出しに部材がありません'
+      : '✅ 全部材の在庫が充足しています';
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:#2e7d32;padding:12px;">'+msg+'<br><span style="font-size:11px;color:#888;">下のフォームから商品を直接追加できます</span></td></tr>';
   } else {
     const autoRows=orderItems.map(item=>{
       const inv=getInventory(item.code);
-      return `<tr>
+      const qty = (mode==='full') ? item.required : (item.required-inv);
+      const rowBg=getColorBg(item.colorName);
+      return `<tr style="background:${rowBg};">
         <td style="font-weight:600;font-size:12px;">${item.productName}</td>
         <td style="font-size:11px;">${item.colorName||'—'}</td>
         <td style="font-size:10px;color:#888;">${item.code}</td>
-        <td class="shortage-cell" style="text-align:center;font-weight:700;">${item.required-inv}</td>
+        <td class="shortage-cell" style="text-align:center;font-weight:700;">${qty}</td>
         <td></td>
       </tr>`;
     }).join('');
@@ -1141,19 +1252,24 @@ function toggleOrderSection() {
 function shareToLine() {
   const hiroi=LS.get('inv_hiroi',[]).find(h=>h.id===currentHiroiId);
   if(!hiroi) return;
-  const orderItems=hiroi.items.filter(item=>getInventory(item.code)<item.required);
+  const mode=getOrderMode(); // 'shortage' or 'full'
+  const orderItems = (mode==='full')
+    ? hiroi.items.slice()
+    : hiroi.items.filter(item=>getInventory(item.code)<item.required);
   const manualItems=hiroi.manualOrderItems||[];
   if(orderItems.length===0 && manualItems.length===0) { alert('発注リストに商品がありません'); return; }
+  const modeLabel = (mode==='full') ? '拾い出し全量' : '不足分のみ';
   const lines=[
     '【発注リスト】',
     hiroi.name,
     hiroi.date,
+    '（'+modeLabel+'）',
     '──────────────',
     ...orderItems.map(item=>{
       const inv=getInventory(item.code);
-      const shortage=item.required-inv;
+      const qty = (mode==='full') ? item.required : (item.required-inv);
       const color=item.colorName?` / ${item.colorName}`:'';
-      return `・${item.productName}${color}\n  品番:${item.code}　数量:${shortage}`;
+      return `・${item.productName}${color}\n  品番:${item.code}　数量:${qty}`;
     }),
     ...manualItems.map(item=>{
       const color=item.color?` / ${item.color}`:'';
@@ -1197,6 +1313,50 @@ function removeManualOrderItem(idx) {
   renderOrderSection(hiroi);
 }
 
+// 色名→薄い背景色マッピング
+function getColorBg(colorName) {
+  const n = colorName || '';
+  if(/ブラック|クロ/.test(n)) return 'rgba(100,100,110,0.18)';
+  if(/しんちゃ|シンチャ/.test(n)) return 'rgba(160,80,50,0.15)';
+  if(/ブラウン|オークブラウン/.test(n)) return 'rgba(150,100,50,0.15)';
+  if(/グリーン/.test(n)) return 'rgba(50,150,80,0.12)';
+  if(/ブルー/.test(n)) return 'rgba(50,100,200,0.12)';
+  if(/ホワイト/.test(n)) return 'rgba(200,210,220,0.15)';
+  if(/シルバー|ステンシルバー/.test(n)) return 'rgba(170,180,195,0.18)';
+  if(/パールグレー/.test(n)) return 'rgba(160,165,175,0.15)';
+  if(/オークグレー|スレートグレー|アーバングレー/.test(n)) return 'rgba(130,135,145,0.18)';
+  if(/コアグレー|メタリックグレー/.test(n)) return 'rgba(140,145,155,0.15)';
+  if(/モダンベージュ|アイボリー/.test(n)) return 'rgba(200,180,130,0.15)';
+  if(/ねずみ/.test(n)) return 'rgba(150,150,155,0.15)';
+  if(/あか/.test(n)) return 'rgba(210,60,60,0.10)';
+  if(/ディープブラウン/.test(n)) return 'rgba(120,70,30,0.18)';
+  if(/スレートブラック/.test(n)) return 'rgba(60,65,75,0.20)';
+  if(/マットシルバー/.test(n)) return 'rgba(180,185,195,0.15)';
+  if(/トーメイ/.test(n)) return 'rgba(180,220,240,0.12)';
+  return 'transparent';
+}
+function getColorHeaderBg(colorName) {
+  const n = colorName || '';
+  if(/ブラック|クロ/.test(n)) return 'rgba(80,80,90,0.45)';
+  if(/しんちゃ|シンチャ/.test(n)) return 'rgba(140,60,30,0.40)';
+  if(/ブラウン|オークブラウン/.test(n)) return 'rgba(130,80,30,0.40)';
+  if(/グリーン/.test(n)) return 'rgba(40,120,60,0.35)';
+  if(/ブルー/.test(n)) return 'rgba(40,80,180,0.35)';
+  if(/ホワイト/.test(n)) return 'rgba(180,190,205,0.30)';
+  if(/シルバー|ステンシルバー/.test(n)) return 'rgba(150,160,175,0.35)';
+  if(/パールグレー/.test(n)) return 'rgba(140,145,160,0.30)';
+  if(/オークグレー|スレートグレー|アーバングレー/.test(n)) return 'rgba(110,115,130,0.35)';
+  if(/コアグレー|メタリックグレー/.test(n)) return 'rgba(120,125,140,0.30)';
+  if(/モダンベージュ|アイボリー/.test(n)) return 'rgba(180,160,110,0.30)';
+  if(/ねずみ/.test(n)) return 'rgba(130,130,140,0.30)';
+  if(/あか/.test(n)) return 'rgba(190,40,40,0.25)';
+  if(/ディープブラウン/.test(n)) return 'rgba(100,50,15,0.40)';
+  if(/スレートブラック/.test(n)) return 'rgba(50,55,65,0.45)';
+  if(/マットシルバー/.test(n)) return 'rgba(160,165,180,0.30)';
+  if(/トーメイ/.test(n)) return 'rgba(160,200,230,0.25)';
+  return '#1e3a5f';
+}
+
 // 前回選択カテゴリを記憶
 let lastItemSheet = '';
 
@@ -1229,18 +1389,21 @@ function showItemTable() {
         <td style="font-size:12px;font-weight:600;">${p.name}<div style="font-size:10px;color:#888;">${p.code}</div></td>
         <td style="text-align:center;padding:4px;">
           <div style="font-size:10px;color:#888;margin-bottom:2px;">在庫:${inv}</div>
-          <input type="number" min="0" placeholder="0"
-            style="width:60px;border:2px solid #b3d4f5;border-radius:6px;padding:4px;font-size:13px;text-align:center;background:#e8f4ff;"
-            data-code="${p.code}" data-name="${p.name}" data-color="" data-ci="-1" data-pi="${i}"
-            oninput="this.style.background=this.value&&parseInt(this.value)>0?'#fff9c4':'#e8f4ff';this.style.borderColor=this.value&&parseInt(this.value)>0?'#f0a500':'#b3d4f5';"
-          />
+          <span class="qty-stepper qty-stepper-sm">
+            <button type="button" onclick="qtyStep(this,-1)">−</button>
+            <input type="number" min="0" placeholder="0"
+              data-code="${p.code}" data-name="${p.name}" data-color="" data-ci="-1" data-pi="${i}"
+              oninput="this.style.background=this.value&&parseInt(this.value)>0?'#fff9c4':'';"
+            />
+            <button type="button" onclick="qtyStep(this,1)">＋</button>
+          </span>
         </td>
       </tr>`;
     });
     container.innerHTML=`
       <p style="font-size:11px;color:#888;margin-bottom:6px;">必要な数量を入力してください（0または空欄はスキップ）</p>
       <table class="tbl" style="border-collapse:collapse;">
-        <thead><tr><th>品名 / 品番</th><th style="min-width:80px;text-align:center;">数量</th></tr></thead>
+        <thead><tr><th>品名 / 品番</th><th style="min-width:120px;text-align:center;">数量</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
     btn.style.display='';
@@ -1250,8 +1413,8 @@ function showItemTable() {
   // 製品マスタの場合
   const data=getEffectiveProductData()[sheet];
   const colors=data.colors;
-  let thead='<tr><th style="min-width:120px;position:sticky;left:0;background:#1e3a5f;z-index:2;">品名</th>';
-  colors.forEach(c=>{ thead+=`<th style="min-width:72px;text-align:center;font-size:11px;">${c}</th>`; });
+  let thead='<tr><th style="min-width:120px;position:sticky;left:0;top:0;background:#1e3a5f;z-index:3;">品名</th>';
+  colors.forEach(c=>{ thead+=`<th style="min-width:110px;text-align:center;font-size:11px;background:${getColorHeaderBg(c)};border-left:1px solid rgba(255,255,255,0.1);position:sticky;top:0;z-index:1;">${c}</th>`; });
   thead+='</tr>';
 
   let rows='';
@@ -1265,17 +1428,21 @@ function showItemTable() {
       const code=p.codes[ci];
       const valid=code&&code!=='—'&&code!=='特注';
       const inv=valid?getInventory(code):0;
+      const cellBg=getColorBg(c);
       if(!valid) {
         const label=code==='特注'?'特注':'-';
-        rows+=`<td style="text-align:center;color:#bbb;font-size:11px;background:#fafafa;">${label}</td>`;
+        rows+=`<td style="text-align:center;color:#bbb;font-size:11px;background:${cellBg};border-left:1px solid #e8e8e8;">${label}</td>`;
       } else {
-        rows+=`<td style="text-align:center;padding:4px;">
+        rows+=`<td style="text-align:center;padding:4px;background:${cellBg};border-left:1px solid #e8e8e8;">
           <div style="font-size:10px;color:#888;margin-bottom:2px;">在庫:${inv}</div>
-          <input type="number" min="0" placeholder="0"
-            style="width:60px;border:2px solid #b3d4f5;border-radius:6px;padding:4px;font-size:13px;text-align:center;background:#e8f4ff;"
-            data-pi="${pi}" data-ci="${ci}" data-code="${code}" data-name="${p.name}" data-color="${c}"
-            oninput="this.style.background=this.value&&parseInt(this.value)>0?'#fff9c4':'#e8f4ff';this.style.borderColor=this.value&&parseInt(this.value)>0?'#f0a500':'#b3d4f5';"
-          />
+          <span class="qty-stepper qty-stepper-sm">
+            <button type="button" onclick="qtyStep(this,-1)">−</button>
+            <input type="number" min="0" placeholder="0"
+              data-pi="${pi}" data-ci="${ci}" data-code="${code}" data-name="${p.name}" data-color="${c}"
+              oninput="this.style.background=this.value&&parseInt(this.value)>0?'#fff9c4':'';"
+            />
+            <button type="button" onclick="qtyStep(this,1)">＋</button>
+          </span>
         </td>`;
       }
     });
@@ -1332,23 +1499,37 @@ function confirmHiroi() {
   const hiroi=list.find(h=>h.id===currentHiroiId);
   if(!hiroi) return;
   if(hiroi.items.length===0) { alert('部材を追加してください'); return; }
-  if(!confirm('「'+hiroi.name+'」の部材を出庫記録に登録しますか？\n在庫から差し引かれます。')) return;
-  const txs=LS.get('inv_tx',[]);
-  const t=today();
-  hiroi.items.forEach(item=>{
-    const tx={
-      id:'tx'+Date.now()+Math.random().toString(36).slice(2),
-      date:t, code:item.code, name:item.productName, color:item.colorName,
-      type:'出庫', qty:item.required, note:'拾い出し:'+hiroi.name, sheet:item.sheet
-    };
-    txs.push(tx);
-    gasPost({action:'addTransaction',id:tx.id,date:tx.date,code:tx.code,name:tx.name,color:tx.color,type:tx.type,qty:tx.qty,note:tx.note});
-  });
-  LS.set('inv_tx',txs);
-  hiroi.status='confirmed';
-  LS.set('inv_hiroi',list);
-  renderHiroiDetail();
-  alert('✅ 出庫記録に登録しました');
+  // ① 確定するかの確認
+  if(!confirm('「'+hiroi.name+'」を確定しますか？')) return;
+  // ② 在庫から差し引くかの選択
+  //   OK    → 在庫から差し引く（出庫記録を作成）
+  //   キャンセル → 差し引かない（出庫記録は作成しない）
+  const deduct = confirm('在庫から差し引きますか？\n\n[OK] 差し引く（出庫記録に登録）\n[キャンセル] 差し引かない（記録のみ・在庫はそのまま）');
+  if(deduct) {
+    const txs=LS.get('inv_tx',[]);
+    const t=today();
+    hiroi.items.forEach(item=>{
+      const tx={
+        id:'tx'+Date.now()+Math.random().toString(36).slice(2),
+        date:t, code:item.code, name:item.productName, color:item.colorName,
+        type:'出庫', qty:item.required, note:'拾い出し:'+hiroi.name, sheet:item.sheet
+      };
+      txs.push(tx);
+      gasPost({action:'addTransaction',id:tx.id,date:tx.date,code:tx.code,name:tx.name,color:tx.color,type:tx.type,qty:tx.qty,note:tx.note});
+    });
+    LS.set('inv_tx',txs);
+    hiroi.status='confirmed';
+    hiroi.deducted=true;
+    LS.set('inv_hiroi',list);
+    renderHiroiDetail();
+    alert('✅ 出庫記録に登録しました（在庫から差し引き済み）');
+  } else {
+    hiroi.status='confirmed';
+    hiroi.deducted=false;
+    LS.set('inv_hiroi',list);
+    renderHiroiDetail();
+    alert('✅ 確定しました（在庫は差し引いていません）');
+  }
 }
 
 function deleteHiroi(id) {
